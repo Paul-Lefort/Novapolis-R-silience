@@ -14,3 +14,4 @@ def read_root(request: Request):
         name="index.html",
         context={"title": settings.app_title},
     )
+

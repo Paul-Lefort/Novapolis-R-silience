@@ -5,6 +5,7 @@ uvicorn[standard]
 sqlalchemy>=2.0
 pymysql
 cryptography
-pydantic-settings
-pytest
+pydantic-settings~=2.11.0
+pytest~=8.4.2
 httpx
+networkx~=3.2.1

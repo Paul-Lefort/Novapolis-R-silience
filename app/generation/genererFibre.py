@@ -1,56 +1,37 @@
 import csv
 import random
 
+from app.generation.reseau import orienter, construire_graphe, haversine_km, lire_sites
 
-def generer_csv_fibre(sites_filepath="sites.csv", fibre_filepath="fibre.csv", nombre_fibres=800):
+
+def generer_csv_fibre(sites_filepath="sites.csv", fibre_filepath="fibre.csv", nombre_fibres=None):
+    """Réseau fibre : topologie locale (câbles courts), coût proportionnel à la longueur.
+
+    - faiblement connexe, NON fortement connexe
+    - degré (in+out) max 3
+    - jitter plus fort que pour les routes : la fibre ne suit pas exactement les routes
     """
-    Génère un fichier fibre.csv connectant les sites du CSV.
-    Colonnes : u,v,cost,statut
-    """
-    ids_sites = []
     try:
-        with open(sites_filepath, mode="r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                ids_sites.append(int(row["id"]))
+        sites = lire_sites(sites_filepath)
     except FileNotFoundError:
         print(f"[ERREUR] Le fichier '{sites_filepath}' est introuvable. Générez-le d'abord !")
         return
-
-    if len(ids_sites) < 2:
-        print("[ERREUR] Il faut au moins 2 sites dans le fichier sites.csv pour créer des liaisons.")
+    if len(sites) < 2:
+        print("[INFO] Pas assez de sites pour créer des liaisons.")
         return
 
+    DG = orienter(construire_graphe(sites, nombre_fibres, jitter=0.5))
+
     fibres = []
-    paires_existantes = set()
+    for u, v in DG.edges():
+        km = haversine_km(sites[u], sites[v])
+        cost = max(500, round(km * random.uniform(800, 1500)))  # €/km
+        statut = random.choices(["actif", "en_maintenance", "deploiement"], weights=[80, 10, 10])[0]
+        fibres.append({"u": u, "v": v, "distance_km": round(km, 2), "cost": cost, "statut": statut})
 
-    statuts_possibles = ["actif", "actif", "actif", "en_maintenance", "deploiement"]
-
-    while len(fibres) < nombre_fibres:
-        u = random.choice(ids_sites)
-        v = random.choice(ids_sites)
-
-        if u == v or (u, v) in paires_existantes or (v, u) in paires_existantes:
-            continue
-
-        paires_existantes.add((u, v))
-
-        cost = random.randint(500, 30000)
-
-        statut = random.choice(statuts_possibles)
-
-        fibres.append({
-            "u": u,
-            "v": v,
-            "cost": cost,
-            "statut": statut
-        })
-
-    champs = ["u", "v", "cost", "statut"]
-
-    with open(fibre_filepath, mode="w", encoding="utf-8", newline="") as fichier_csv:
-        writer = csv.DictWriter(fichier_csv, fieldnames=champs)
-        writer.writeheader()
-        writer.writerows(fibres)
-
-    print(f"[SUCCÈS] Le fichier '{fibre_filepath}' a été généré avec succès avec {len(fibres)} liaisons fibre !")
+    champs = ["u", "v", "distance_km", "cost", "statut"]
+    with open(fibre_filepath, mode="w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=champs)
+        w.writeheader()
+        w.writerows(fibres)
+    print(f"[SUCCÈS] '{fibre_filepath}' généré ({len(fibres)} liaisons, sans croisement).")

@@ -1,34 +1,26 @@
-import math
-from .common import prepare_graph, event, make_response
+import networkx as nx
+from .common import prepare_networkx_graph, event, make_response
 
-
-def run(graph):
-    nodes, adj, edges = prepare_graph(graph)
-    n = len(nodes)
-    node_to_idx = {node: i for i, node in enumerate(nodes)}
-
-    dist = [[math.inf] * n for _ in range(n)]
-
-    for i in range(n):
-        dist[i][i] = 0
-
-    for edge in edges:
-        u, v, w = edge["source"], edge["target"], edge["weight"]
-        i, j = node_to_idx[u], node_to_idx[v]
-        if w < dist[i][j]:
-            dist[i][j] = w
-        if w < dist[j][i]:
-            dist[j][i] = w
+def run(graph_data):
+    G, start, target = prepare_networkx_graph(graph_data, "routier")
 
     steps = []
-    steps.append(event("initialize", "Initialisation Floyd-Warshall", "Matrice des distances initialisée."))
+    steps.append(event("initialize", "Initialisation Floyd-Warshall", "Calcul des plus courts chemins pour toutes les paires."))
 
-    for k in range(n):
-        for i in range(n):
-            for j in range(n):
-                if dist[i][k] + dist[k][j] < dist[i][j]:
-                    dist[i][j] = dist[i][k] + dist[k][j]
-                    steps.append(
-                        event("relax", "Chemin amélioré", f"Passage par {nodes[k]} améliore {nodes[i]} -> {nodes[j]}."))
+    # Calcul global via NetworkX
+    try:
+        lengths = dict(nx.all_pairs_dijkstra_path_length(G, weight="weight"))
+        paths = dict(nx.all_pairs_dijkstra_path(G, weight="weight"))
 
-    return make_response(graph, steps, {"distances": dist, "nodes": nodes})
+        path = paths.get(start, {}).get(target, []) if (start and target) else []
+        cost = lengths.get(start, {}).get(target, None) if (start and target) else None
+
+        steps.append(event("complete", "Calcul matriciel terminé", "Matrice des distances calculée avec succès."))
+
+        return make_response(graph_data, steps, {
+            "path": path,
+            "cost": cost,
+            "all_lengths": lengths
+        })
+    except Exception as e:
+        raise ValueError(f"Erreur Floyd-Warshall : {str(e)}")

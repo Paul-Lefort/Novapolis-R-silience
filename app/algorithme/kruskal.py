@@ -1,48 +1,37 @@
-from .common import prepare_graph, event, make_response
+import networkx as nx
+from .common import prepare_networkx_graph, event, make_response
 
 
-class UnionFind:
-    def __init__(self, nodes):
-        self.parent = {n: n for n in nodes}
-        self.rank = {n: 0 for n in nodes}
+def run(graph_data):
+    # Les algorithmes de MST (Kruskal/Prim) s'appliquent par défaut au réseau fibre (non orienté)
+    G, start, _ = prepare_networkx_graph(graph_data, network_type="fibre")
 
-    def find(self, i):
-        if self.parent[i] == i:
-            return i
-        self.parent[i] = self.find(self.parent[i])
-        return self.parent[i]
+    if len(G.nodes) == 0:
+        raise ValueError("Le graphe est vide.")
 
-    def union(self, i, j):
-        root_i = self.find(i)
-        root_j = self.find(j)
-        if root_i != root_j:
-            if self.rank[root_i] < self.rank[root_j]:
-                self.parent[root_i] = root_j
-            elif self.rank[root_i] > self.rank[root_j]:
-                self.parent[root_j] = root_i
-            else:
-                self.parent[root_j] = root_i
-                self.rank[root_i] += 1
-            return True
-        return False
-
-
-def run(graph):
-    nodes, adj, edges = prepare_graph(graph)
-    sorted_edges = sorted(edges, key=lambda e: e["weight"])
-    uf = UnionFind(nodes)
-    mst = []
     steps = []
+    steps.append(event("initialize", "Initialisation de Kruskal",
+                       "Préparation du graphe non orienté (hors maintenance/déploiement)."))
 
-    steps.append(event("initialize", "Initialisation Kruskal", "Arêtes triées par poids croissants."))
+    try:
+        # Utilisation de NetworkX pour Kruskal (génère un ensemble d'arêtes)
+        mst_edges = list(nx.minimum_spanning_edges(G, algorithm="kruskal", weight="weight", data=True))
 
-    for edge in sorted_edges:
-        u, v, w, eid = edge["source"], edge["target"], edge["weight"], edge["id"]
-        if uf.union(u, v):
-            mst.append(edge)
-            steps.append(
-                event("add_edge", "Arête ajoutée au MST", f"Arête {eid} ({u} - {v}) ajoutée.", active_edge=eid))
-        else:
-            steps.append(event("skip_edge", "Arête ignorée (cycle)", f"Arête {eid} crée un cycle.", active_edge=eid))
+        # Reconstruction du chemin ou de la liste des arêtes du MST pour l'affichage
+        path_nodes = []
+        total_weight = 0
+        for u, v, data in mst_edges:
+            total_weight += data.get("weight", 0)
+            if u not in path_nodes: path_nodes.append(u)
+            if v not in path_nodes: path_nodes.append(v)
 
-    return make_response(graph, steps, {"mst": mst, "total_weight": sum(e["weight"] for e in mst)})
+        steps.append(event("complete", "MST Kruskal calculé",
+                           f"Arbre couvrant minimum trouvé avec un poids total de {total_weight}."))
+
+        return make_response(graph_data, steps, {
+            "path": path_nodes,
+            "cost": total_weight,
+            "mst_edges": [{"source": u, "target": v, "weight": d.get("weight")} for u, v, d in mst_edges]
+        })
+    except Exception as exc:
+        raise ValueError(f"Erreur lors du calcul de Kruskal : {str(exc)}")

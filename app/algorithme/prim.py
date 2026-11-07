@@ -1,34 +1,37 @@
-import heapq
-from .common import prepare_graph, event, make_response
+import networkx as nx
+from .common import prepare_networkx_graph, event, make_response
 
 
-def run(graph):
-    nodes, adj, edges = prepare_graph(graph)
-    start = graph.get("start") or nodes[0]
-    if start not in adj:
-        raise ValueError("Sommet de départ invalide.")
+def run(graph_data):
+    G, start, _ = prepare_networkx_graph(graph_data, network_type="fibre")
 
-    visited = {n: False for n in nodes}
-    mst = []
-    pq = []
+    if len(G.nodes) == 0:
+        raise ValueError("Le graphe est vide.")
+
+    # Si aucun sommet de départ n'est fourni, on prend le premier nœud du graphe par défaut
+    if not start or start not in G:
+        start = list(G.nodes)[0]
+
     steps = []
+    steps.append(event("initialize", "Initialisation de Prim", f"Démarrage de l'arbre à partir du sommet {start}."))
 
-    visited[start] = True
-    for v, eid, w in adj[start]:
-        heapq.heappush(pq, (w, start, v, eid))
+    try:
+        # Utilisation de NetworkX pour Prim
+        mst_g = nx.minimum_spanning_tree(G, algorithm="prim", weight="weight")
 
-    steps.append(event("initialize", "Initialisation Prim", f"Départ depuis {start}."))
+        # Extraction des arêtes et du coût total
+        total_weight = sum(d.get("weight", 0) for u, v, d in mst_g.edges(data=True))
 
-    while pq:
-        w, u, v, eid = heapq.heappop(pq)
-        if visited[v]:
-            continue
-        visited[v] = True
-        mst.append({"id": eid, "source": u, "target": v, "weight": w})
-        steps.append(event("add_edge", "Arête ajoutée au MST", f"Ajout de {eid} ({u} - {v}).", active_edge=eid))
+        # Parcours en profondeur (DFS) ou liste des sommets pour l'affichage visuel
+        path_nodes = list(nx.dfs_preorder_nodes(mst_g, source=start))
 
-        for nxt, nxt_eid, nxt_w in adj[v]:
-            if not visited[nxt]:
-                heapq.heappush(pq, (nxt_w, v, nxt, nxt_eid))
+        steps.append(event("complete", "MST Prim calculé",
+                           f"Arbre couvrant minimum de Prim généré (coût total : {total_weight})."))
 
-    return make_response(graph, steps, {"mst": mst, "total_weight": sum(e["weight"] for e in mst)})
+        return make_response(graph_data, steps, {
+            "path": path_nodes,
+            "cost": total_weight,
+            "mst_edges": [{"source": u, "target": v, "weight": d.get("weight")} for u, v, d in mst_g.edges(data=True)]
+        })
+    except Exception as exc:
+        raise ValueError(f"Erreur lors du calcul de Prim : {str(exc)}")

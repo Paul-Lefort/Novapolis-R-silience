@@ -1,44 +1,29 @@
-import heapq
-import math
-from .common import prepare_graph, event, make_response
+import networkx as nx
+from .common import prepare_networkx_graph, event, make_response
 
 
-def run(graph):
-    nodes, adj, edges = prepare_graph(graph)
-    start = graph.get("start")
-    if start not in adj:
-        raise ValueError("Indiquez un sommet de départ existant dans 'start'.")
+def run(graph_data):
+    G, start, target = prepare_networkx_graph(graph_data, "routier")
 
-    dist = {n: math.inf for n in nodes}
-    prev = {n: None for n in nodes}
-    dist[start] = 0
-    pq = [(0, start)]
+    if start not in G:
+        raise ValueError(f"Le sommet de départ {start} est introuvable ou exclu.")
+    if target and target not in G:
+        raise ValueError(f"Le sommet d'arrivée {target} est introuvable ou exclu.")
+
     steps = []
+    steps.append(
+        event("initialize", "Initialisation Dijkstra", f"Recherche du plus court chemin depuis {start} vers {target}."))
 
-    steps.append(event("initialize", "Initialisation Dijkstra", f"Distance de départ {start} à 0.", current_node=start,
-                       distances={n: 0 if n == start else None for n in nodes}))
+    try:
+        path = nx.shortest_path(G, source=start, target=target, weight="weight")
+        length = nx.shortest_path_length(G, source=start, target=target, weight="weight")
 
-    while pq:
-        d, u = heapq.heappop(pq)
-        if d > dist[u]:
-            continue
-        steps.append(
-            event("pop", "Extraction du min", f"Sommet {u} extrait avec une distance de {d:g}.", current_node=u,
-                  distances={n: (dist[n] if math.isfinite(dist[n]) else None) for n in nodes}))
+        steps.append(event("complete", "Chemin optimal trouvé", f"Chemin trouvé avec un coût total de {length}."))
 
-        for v, eid, w in adj[u]:
-            if dist[u] + w < dist[v]:
-                dist[v] = dist[u] + w
-                prev[v] = u
-                heapq.heappush(pq, (dist[v], v))
-                steps.append(event("relax", "Distance améliorée", f"Via {u}, distance de {v} réduite à {dist[v]:g}.",
-                                   current_node=u, candidate_node=v, active_edge=eid,
-                                   distances={n: (dist[n] if math.isfinite(dist[n]) else None) for n in nodes}))
-            else:
-                steps.append(event("check", "Arête vérifiée", f"Pas d'amélioration pour {v} via {u}.", current_node=u,
-                                   candidate_node=v, active_edge=eid))
-
-    steps.append(event("complete", "Dijkstra Terminé", "Plus courts chemins calculés.",
-                       distances={n: (dist[n] if math.isfinite(dist[n]) else None) for n in nodes}))
-    return make_response(graph, steps, {"distances": {n: (dist[n] if math.isfinite(dist[n]) else None) for n in nodes},
-                                        "predecessors": prev})
+        return make_response(graph_data, steps, {
+            "path": path,
+            "cost": length
+        })
+    except nx.NetworkXNoPath:
+        raise ValueError(
+            "Aucun chemin valide n'existe entre le départ et l'arrivée en contournant les zones de travaux.")

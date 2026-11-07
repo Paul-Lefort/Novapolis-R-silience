@@ -5,6 +5,9 @@ const STYLES = {
     fibre:   { base: '#0b8043', label: 'Fibre' }
 };
 
+let nodeMarkers = {};
+let pathLayer = null;
+
 function initMap() {
     map = L.map('network-container', {
         preferCanvas: true,
@@ -17,6 +20,7 @@ function initMap() {
     edgeLayer = L.layerGroup().addTo(map);
     arrowLayer = L.layerGroup().addTo(map);
     nodeLayer = L.layerGroup().addTo(map);
+    pathLayer = L.layerGroup().addTo(map);
 
     map.on('zoomend', drawArrows);
 
@@ -41,7 +45,6 @@ function edgeStyle(kind, statut) {
     return { color, weight, dashArray: dash, opacity };
 }
 
-// 1. Réseau routier : flèches uniquement sur les sens uniques stricts (zéro flèche si bidirectionnel)
 function drawRouteEdges(rows, sitesMap) {
     let count = 0;
     const directedEdges = new Set(rows.map(r => `${String(r.u)}_${String(r.v)}`));
@@ -61,7 +64,6 @@ function drawRouteEdges(rows, sitesMap) {
         line.on('mouseout', () => line.setStyle(style));
         edgeLayer.addLayer(line);
 
-        // Si l'arc inverse existe (v -> u), on n'affiche aucune flèche
         const hasReverse = directedEdges.has(`${String(row.v)}_${String(row.u)}`);
         if (!hasReverse) {
             arrowData.push({ from: posU, to: posV, color: style.color });
@@ -70,7 +72,6 @@ function drawRouteEdges(rows, sitesMap) {
     return count;
 }
 
-// 2. Réseau fibre : non orienté, sans aucune flèche
 function drawFibreEdges(rows, sitesMap) {
     let count = 0;
     rows.forEach(row => {
@@ -131,7 +132,9 @@ function renderGraph(type, fit = false) {
     currentView = type;
     edgeLayer.clearLayers();
     nodeLayer.clearLayers();
+    if (pathLayer) pathLayer.clearLayers();
     arrowData = [];
+    nodeMarkers = {};
 
     const sitesMap = new Map();
     const bounds = [];
@@ -151,10 +154,21 @@ function renderGraph(type, fit = false) {
     sitesData.forEach(site => {
         const pos = sitesMap.get(site.id);
         if (!pos) return;
-        L.circleMarker(pos, {
-            radius: 5, fillColor: nodeColor, color: '#fff', weight: 1.5, fillOpacity: 1
-        }).bindPopup(`<b>${site.nom || 'Site ' + site.id}</b><br>${site.type || ''}<br>ID : ${site.id}`)
-          .addTo(nodeLayer);
+
+        let marker = L.circleMarker(pos, {
+            radius: 6, fillColor: nodeColor, color: '#fff', weight: 1.5, fillOpacity: 1
+        });
+
+        marker.bindPopup(`<b>${site.nom || 'Site ' + site.id}</b><br>${site.type || ''}<br>ID : ${site.id}`);
+
+        marker.on('click', () => {
+            if (typeof handleNodeClick === 'function') {
+                handleNodeClick(site.id);
+            }
+        });
+
+        nodeMarkers[site.id] = marker;
+        marker.addTo(nodeLayer);
     });
 
     drawArrows();
@@ -164,4 +178,77 @@ function renderGraph(type, fit = false) {
 
     const stats = document.getElementById('stats-info');
     if (stats) stats.innerText = `${sitesMap.size} sites & ${nbEdges} connexions`;
+}
+
+function highlightPath(pathNodeIds) {
+    if (!pathLayer) {
+        pathLayer = L.layerGroup().addTo(map);
+    }
+    pathLayer.clearLayers();
+
+    if (!pathNodeIds || pathNodeIds.length < 2) return;
+
+    const sitesMap = new Map();
+    sitesData.forEach(site => {
+        const lat = site.latitude ?? site.lat;
+        const lon = site.longitude ?? site.lon ?? site.x;
+        if (lat != null && lon != null) sitesMap.set(site.id, [lat, lon]);
+    });
+
+    for (let i = 0; i < pathNodeIds.length - 1; i++) {
+        const u = pathNodeIds[i];
+        const v = pathNodeIds[i + 1];
+
+        const posU = sitesMap.get(u);
+        const posV = sitesMap.get(v);
+
+        if (posU && posV) {
+            const pathLine = L.polyline([posU, posV], {
+                color: '#00E676',
+                weight: 6,
+                opacity: 0.95
+            });
+            pathLayer.addLayer(pathLine);
+        }
+    }
+}
+
+function updateMarkerVisual(nodeId, type) {
+    const marker = nodeMarkers[nodeId];
+    if (!marker) return;
+
+    if (type === 'car') {
+        marker.setStyle({
+            fillColor: '#1a73e8',
+            color: '#ffffff',
+            radius: 10,
+            weight: 3
+        });
+        marker.bindTooltip("🚗 Départ", { permanent: true, direction: "top" }).openTooltip();
+    } else if (type === 'flag') {
+        marker.setStyle({
+            fillColor: '#d93025',
+            color: '#ffffff',
+            radius: 10,
+            weight: 3
+        });
+        marker.bindTooltip("🏁 Arrivée", { permanent: true, direction: "top" }).openTooltip();
+    }
+}
+
+function resetMarkersVisual() {
+    const defaultColor = currentView === 'fibre' ? STYLES.fibre.base : STYLES.routier.base;
+    Object.keys(nodeMarkers).forEach(nodeId => {
+        const marker = nodeMarkers[nodeId];
+        if (marker) {
+            marker.setStyle({
+                fillColor: defaultColor,
+                color: '#fff',
+                radius: 6,
+                weight: 1.5
+            });
+            marker.unbindTooltip();
+        }
+    });
+    if (pathLayer) pathLayer.clearLayers();
 }

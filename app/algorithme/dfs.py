@@ -1,34 +1,21 @@
-from .common import prepare_graph, event, make_response
+import networkx as nx
+from .common import prepare_networkx_graph, event, make_response
 
+def run(graph_data):
+    G, start, _ = prepare_networkx_graph(graph_data, "routier")
 
-def run(graph):
-    nodes, adj, edges = prepare_graph(graph)
-    start = graph.get("start")
-    if start not in adj:
-        raise ValueError("Indiquez un sommet de départ existant dans 'start'.")
+    if start not in G:
+        raise ValueError(f"Le sommet de départ {start} est introuvable.")
 
-    visited = {n: False for n in nodes}
-    parent = {n: None for n in nodes}
     steps = []
+    steps.append(event("initialize", "Initialisation DFS", f"Parcours en profondeur à partir de {start}."))
 
-    def dfs(u):
-        visited[u] = True
-        steps.append(
-            event("visit", "Visite du sommet", f"Visite récursive de {u}.", current_node=u, visited=visited.copy()))
-        for v, eid, w in adj[u]:
-            if not visited[v]:
-                parent[v] = u
-                steps.append(
-                    event("discover", "Arête explorée", f"Traversée de l'arête {eid} vers {v}.", current_node=u,
-                          candidate_node=v, active_edge=eid, visited=visited.copy()))
-                dfs(v)
-            else:
-                steps.append(
-                    event("check", "Arête ignorée", f"Sommet {v} déjà visité.", current_node=u, candidate_node=v,
-                          active_edge=eid, visited=visited.copy()))
+    dfs_edges = list(nx.dfs_edges(G, source=start))
+    visited_nodes = [start] + [v for _, v in dfs_edges]
 
-    steps.append(event("initialize", "Initialisation DFS", f"Début du DFS depuis {start}.", current_node=start,
-                       visited=visited.copy()))
-    dfs(start)
-    steps.append(event("complete", "DFS Terminé", "Exploration en profondeur terminée.", visited=visited.copy()))
-    return make_response(graph, steps, {"visited": visited, "parent": parent})
+    steps.append(event("complete", "Parcours DFS terminé", f"{len(visited_nodes)} sommets visités."))
+
+    return make_response(graph_data, steps, {
+        "visited_nodes": visited_nodes,
+        "dfs_edges": dfs_edges
+    })

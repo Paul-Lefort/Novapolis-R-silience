@@ -1,21 +1,35 @@
-// api.js - Gestion des requêtes, du cache et du chargement des données CSV
+// api.js - Gestion des requêtes, du cache, du chargement, de l'export et de l'import
 
 async function submitGeneration() {
     const nbSites = document.getElementById('nombre-sites-input').value;
     closeModal();
     const overlay = document.getElementById('loading-overlay');
-    overlay.style.display = 'flex';
-    overlay.style.opacity = '1';
-    setLoadingMessage(`Génération de ${nbSites} sites...`);
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+    }
+    setLoadingMessage(`Génération de ${nbSites} sites sur le serveur...`);
 
     try {
-        const response = await fetch(`/api/download/all?nombre_sites=${nbSites}&_t=${Date.now()}`);
-        if (!response.ok) throw new Error("Erreur de génération");
+        const response = await fetch(`/api/generate?nombre_sites=${nbSites}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Erreur de génération");
+        }
+
+        setLoadingMessage("Génération réussie, rechargement du réseau...");
         setTimeout(loadNetworkData, 800);
     } catch (error) {
         console.error("Erreur:", error);
         setLoadingMessage("Erreur lors de la génération.", true);
-        setTimeout(() => { window.location.reload(true); }, 1500);
+        setTimeout(() => {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }, 2000);
     }
 }
 
@@ -30,6 +44,7 @@ async function loadNetworkData() {
             setLoadingMessage(msg);
             const separator = url.includes('?') ? '&' : '?';
             const res = await fetch(`${url}${separator}_t=${Date.now()}`, { cache: 'no-store' });
+            if (!res.ok) throw new Error(`Impossible de charger ${url}`);
             const text = await res.text();
             return Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
         };
@@ -49,4 +64,43 @@ async function loadNetworkData() {
         console.error("Erreur de chargement:", error);
         setLoadingMessage("Erreur lors de la récupération des CSV.", true);
     }
+}
+
+// ==================== EXPORT & IMPORT ====================
+
+function downloadZipArchive() {
+    window.location.href = '/api/download/all';
+}
+
+function downloadSingle(filename) {
+    window.location.href = `/api/download/${filename}`;
+}
+
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('import-status');
+    if (statusEl) statusEl.innerText = `Fichier sélectionné : ${file.name}`;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const parsedData = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
+
+        alert(`Fichier ${file.name} analysé avec succès (${parsedData.length} lignes) !`);
+
+        if (file.name.includes('sites')) {
+            sitesData = parsedData;
+        } else if (file.name.includes('routes')) {
+            routesData = parsedData;
+        } else if (file.name.includes('fibre')) {
+            fibreData = parsedData;
+        }
+
+        if (typeof renderGraph === 'function') {
+            renderGraph(currentView, true);
+        }
+    };
+    reader.readAsText(file);
 }

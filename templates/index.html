@@ -24,7 +24,7 @@
             </a>
         </div>
         <div class="nav-right">
-            <button class="google-nav-btn" onclick="openModal()">⚙️ Générer un jeu de données</button>
+            <button class="google-nav-btn" onclick="openModal()">Générer un jeu de données</button>
         </div>
     </nav>
 
@@ -39,13 +39,16 @@
                 <button class="icon-collapsed-btn" onclick="toggleSidebarTab('algo')" title="Algorithmes">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
                 </button>
+                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('intervention')" title="Intervention & Scénario">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </button>
                 <button class="icon-collapsed-btn" onclick="toggleSidebarTab('export')" title="Export des Données">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 </button>
                 <button class="icon-collapsed-btn" onclick="toggleSidebarTab('import')" title="Import de Fichiers">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                 </button>
-                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('stats')" title="Statistiques">
+                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('stats')" title="Statistiques & Diagnostic">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                 </button>
             </div>
@@ -55,10 +58,10 @@
 
                 <!-- PERMANENT : Vues du Réseau -->
                 <div class="sidebar-section">
-                    <h3>🗺️ Vues du Réseau</h3>
+                    <h3>Vues du Réseau</h3>
                     <div class="view-switch-col">
-                        <button class="view-btn active" id="btn-routier" onclick="switchView('routier')">🛣️ Réseau Routier</button>
-                        <button class="view-btn" id="btn-fibre" onclick="switchView('fibre')">🌐 Réseau Fibre Optique</button>
+                        <button class="view-btn active" id="btn-routier" onclick="switchView('routier')">Réseau Routier</button>
+                        <button class="view-btn" id="btn-fibre" onclick="switchView('fibre')">Réseau Fibre Optique</button>
                     </div>
                 </div>
 
@@ -67,34 +70,75 @@
                 <!-- 1. Onglet Algorithmes -->
                 <div id="tab-algo" class="sidebar-tab-content" style="display: none;">
                     <div class="sidebar-section">
-                        <h3>🚀 Algorithmes</h3>
+                        <h3>Algorithmes de Cheminement</h3>
                         <div class="algo-control-group">
                             <select id="algo-select" class="sidebar-select" onchange="onAlgoChange()">
-                                <option value="dijkstra">Dijkstra (Plus court chemin)</option>
-                                <option value="bellman_ford">Bellman-Ford</option>
-                                <option value="bfs">BFS (Largeur)</option>
-                                <option value="dfs">DFS (Profondeur)</option>
-                                <option value="floyd_warshall">Floyd-Warshall</option>
-                                <option value="kruskal">Kruskal (MST)</option>
-                                <option value="prim">Prim (MST)</option>
+                                <option value="dijkstra">Dijkstra (Référence - Poids positifs)</option>
+                                <option value="bellman_ford">Bellman-Ford (Détection de cycles négatifs)</option>
+                                <option value="floyd_warshall">Floyd-Warshall (Tous couples V x V)</option>
+                                <option value="bfs">BFS (Minimiser nombre d'arcs)</option>
+                                <option value="dfs">DFS (Exploration en profondeur)</option>
+                                <option value="kruskal">Kruskal (Arbre couvrant minimal)</option>
+                                <option value="prim">Prim (Arbre couvrant minimal)</option>
                             </select>
 
                             <div class="selection-status" style="margin-top: 10px;">
-                                <div>🚗 Départ : <span id="label-start">Aucun</span></div>
-                                <div id="target-container" style="margin-top: 4px;">🏁 Arrivée : <span id="label-target">Aucun</span></div>
+                                <div>Départ : <span id="label-start">Aucun</span></div>
+                                <div id="target-container" style="margin-top: 4px;">Arrivée : <span id="label-target">Aucun</span></div>
                             </div>
 
-                            <button class="sidebar-action-btn" onclick="runSelectedAlgorithm()" style="margin-top: 10px;">🚀 Lancer l'algorithme</button>
+                            <button class="sidebar-action-btn" onclick="runSelectedAlgorithm()" style="margin-top: 10px;">Lancer l'algorithme</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Onglet Export -->
+                <!-- NOUVEAU MENU : Intervention & Scénario -->
+                <div id="tab-intervention" class="sidebar-tab-content" style="display: none;">
+                    <div class="sidebar-section">
+                        <h3>Calcul d'Intervention</h3>
+                        <p style="font-size: 11px; color: #5f6368; margin-bottom: 10px;">
+                            Choisissez la caserne de départ dans la liste et cliquez sur la carte pour définir le site d'intervention (arrivée).
+                        </p>
+
+                        <!-- 1. Sélecteur de caserne & statut arrivée -->
+                        <div style="background: #f8f9fa; border: 1px solid #dadce0; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">Sommets de l'intervention</div>
+
+                            <label style="font-size: 11px; color: #5f6368; display: block; margin-bottom: 2px;">Caserne de départ :</label>
+                            <select id="inter-start-select" class="sidebar-select" onchange="onCaserneSelectChange(this.value)" style="width: 100%; margin-bottom: 8px;">
+                                <option value="">Chargement des casernes...</option>
+                            </select>
+
+                            <div style="font-size: 12px;">Site cible (clic carte) : <span id="inter-target" style="font-weight: 600; color: #d93025;">Aucun</span></div>
+                        </div>
+
+                        <!-- 2. Choix du scénario -->
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px;">2. Scénario de perturbation</label>
+
+                            <div style="font-size: 11px; color: #5f6368; margin-bottom: 4px;">Importer scenarios.csv :</div>
+                            <input type="file" id="inter-scenario-file" accept=".csv" style="width: 100%; font-size: 11px; margin-bottom: 8px;">
+
+                            <div style="font-size: 11px; color: #5f6368; margin-bottom: 4px;">Ou saisir des arcs à fermer (u->v) :</div>
+                            <input type="text" id="inter-manual-arcs" placeholder="Ex: 3->16, 8->10" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+
+                        <!-- 3. Bouton de lancement -->
+                        <button onclick="lancerCalculIntervention()" style="width: 100%; padding: 10px; background: #ea4335; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            Calculer le trajet d'intervention
+                        </button>
+
+                        <!-- 4. Zone de résultats -->
+                        <div id="intervention-results" style="margin-top: 12px;"></div>
+                    </div>
+                </div>
+
+                <!-- 3. Onglet Export -->
                 <div id="tab-export" class="sidebar-tab-content" style="display: none;">
                     <div class="sidebar-section">
-                        <h3>📤 Export des Données</h3>
+                        <h3>Export des Données</h3>
                         <button onclick="downloadZipArchive()" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 8px;">
-                            📦 Télécharger le ZIP complet
+                            Télécharger le ZIP complet
                         </button>
                         <div style="display: flex; gap: 5px;">
                             <button onclick="downloadSingle('sites.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Sites</button>
@@ -104,10 +148,10 @@
                     </div>
                 </div>
 
-                <!-- 3. Onglet Import -->
+                <!-- 4. Onglet Import -->
                 <div id="tab-import" class="sidebar-tab-content" style="display: none;">
                     <div class="sidebar-section">
-                        <h3>📥 Import de Fichiers CSV</h3>
+                        <h3>Import de Fichiers CSV</h3>
                         <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Sélectionnez vos fichiers de données :</p>
 
                         <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
@@ -126,34 +170,33 @@
                         </div>
 
                         <button onclick="submitMultiFileImport()" style="width: 100%; margin-top: 12px; padding: 8px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                            📂 Envoyer les fichiers au serveur
+                            Envoyer les fichiers au serveur
                         </button>
 
                         <hr style="margin: 15px 0; border: none; border-top: 1px solid #dee2e6;">
 
-                        <!-- Section Import de Scénario Rapide -->
-                        <h3>🎬 Scénarios Prédéfinis</h3>
-                        <p style="font-size: 12px; color: #666; margin-bottom: 8px;"> Charger un scénario de test :</p>
+                        <h3>Scénarios Prédéfinis</h3>
+                        <p style="font-size: 12px; color: #666; margin-bottom: 8px;">Charger un scénario de test :</p>
                         <button onclick="loadPresetScenario('standard')" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 6px;">
-                            ⚡ Charger le Scénario Standard (120 sites)
+                            Charger le Scénario Standard (120 sites)
                         </button>
 
                         <span id="import-status" style="font-size: 11px; display: block; margin-top: 6px; color: #666;"></span>
                     </div>
                 </div>
 
-                <!-- 4. Onglet Statistiques & Analyses Avancées -->
+                <!-- 5. Onglet Statistiques & Diagnostic -->
                 <div id="tab-stats" class="sidebar-tab-content" style="display: none;">
                     <div class="sidebar-section">
-                        <h3>📊 Analyses & Indicateurs (DFS/BFS)</h3>
+                        <h3>Diagnostic & Accessibilité</h3>
                         <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                            Évalue l'accessibilité, les composantes connexes, la présence de cycles et les zones d'isolement.
+                            Évalue la couverture des casernes, les composantes connexes et détecte les cycles.
                         </p>
                         <button onclick="fetchNetworkReport()" style="width: 100%; padding: 10px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            🔍 Calculer les 5 indicateurs
+                            Lancer l'analyse du réseau
                         </button>
                         <div id="stats-info" style="font-size: 13px; color: #334043; line-height: 1.4;">
-                            Cliquez sur le bouton pour générer le rapport complet de connexité et d'analyse du réseau.
+                            Cliquez sur le bouton pour afficher le rapport global et surligner les zones hors portée.
                         </div>
                     </div>
                 </div>
@@ -186,7 +229,7 @@
         </div>
     </div>
 
-<!-- Scripts JS ordonnés -->
+    <!-- Scripts JS ordonnés -->
     <script src="/static/js/graphRender.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/algorithms.js"></script>

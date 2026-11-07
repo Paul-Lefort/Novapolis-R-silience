@@ -61,7 +61,10 @@ function drawRouteEdges(rows, sitesMap) {
         const line = L.polyline([posU, posV], style);
 
         const km = row.distance_km != null ? `${row.distance_km} km<br>` : '';
-        line.bindPopup(`<b>Route ${row.u} ➔ ${row.v}</b><br>${km}Normal : ${row.temps_normal} min<br>Pointe : ${row.temps_pointe} min<br>Statut : ${row.statut}`);
+        line.bindTooltip(`<b>Route ${row.u} ➔ ${row.v}</b><br>${km}Normal : ${row.temps_normal} min<br>Pointe : ${row.temps_pointe} min<br>Statut : ${row.statut}`, {
+            direction: 'top',
+            sticky: true
+        });
 
         line.on('mouseover', () => line.setStyle({ weight: style.weight + 2, opacity: 1 }));
         line.on('mouseout', () => line.setStyle(style));
@@ -87,7 +90,10 @@ function drawFibreEdges(rows, sitesMap) {
         const line = L.polyline([posU, posV], style);
 
         const km = row.distance_km != null ? `${row.distance_km} km<br>` : '';
-        line.bindPopup(`<b>Fibre entre ${row.u} et ${row.v}</b><br>${km}Coût : ${row.cost} k€<br>Statut : ${row.statut}`);
+        line.bindTooltip(`<b>Fibre entre ${row.u} et ${row.v}</b><br>${km}Coût : ${row.cost} k€<br>Statut : ${row.statut}`, {
+            direction: 'top',
+            sticky: true
+        });
 
         line.on('mouseover', () => line.setStyle({ weight: style.weight + 2, opacity: 1 }));
         line.on('mouseout', () => line.setStyle(style));
@@ -166,7 +172,11 @@ function renderGraph(type, fit = false) {
             radius: 6, fillColor: nodeColor, color: '#fff', weight: 1.5, fillOpacity: 1
         });
 
-        marker.bindPopup(`<b>${site.nom || 'Site ' + site.id}</b><br>${site.type || ''}<br>ID : ${site.id}`);
+        // Infobulle affichée au survol uniquement
+        marker.bindTooltip(`<b>${site.nom || 'Site ' + site.id}</b><br>${site.type || ''}<br>ID : ${site.id}`, {
+            direction: 'top',
+            sticky: true
+        });
 
         marker.on('click', () => {
             if (typeof handleNodeClick === 'function') {
@@ -226,7 +236,6 @@ function highlightPath(pathNodeIds) {
     }
 }
 
-// Surlignage en ROUGE des nœuds non atteignables
 function highlightUnreachableNodes(nodeIds) {
     if (!unreachableLayer) {
         unreachableLayer = L.layerGroup().addTo(map);
@@ -278,7 +287,6 @@ function updateMarkerVisual(nodeId, type) {
             radius: 10,
             weight: 3
         });
-        marker.bindTooltip("🚗 Départ", { permanent: true, direction: "top" }).openTooltip();
     } else if (type === 'flag') {
         marker.setStyle({
             fillColor: '#d93025',
@@ -286,7 +294,6 @@ function updateMarkerVisual(nodeId, type) {
             radius: 10,
             weight: 3
         });
-        marker.bindTooltip("🏁 Arrivée", { permanent: true, direction: "top" }).openTooltip();
     }
 }
 
@@ -301,7 +308,6 @@ function resetMarkersVisual() {
                 radius: 6,
                 weight: 1.5
             });
-            marker.unbindTooltip();
         }
     });
     if (pathLayer) pathLayer.clearLayers();

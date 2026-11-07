@@ -6,7 +6,7 @@ let sitesData = [], routesData = [], fibreData = [];
 let arrowData = [];
 let currentView = 'routier';
 
-// États pour les algorithmes (Sélection interactive)
+// États pour les algorithmes
 let selectedStartNode = null;
 let selectedTargetNode = null;
 
@@ -50,11 +50,10 @@ function toggleSidebar() {
     }, 300);
 }
 
-// Adaptation de l'interface selon l'algorithme choisi
 function onAlgoChange() {
     const algoName = document.getElementById('algo-select').value;
     const targetContainer = document.getElementById('target-container');
-    const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall'].includes(algoName);
+    const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall', 'bfs'].includes(algoName);
 
     if (targetContainer) {
         targetContainer.style.display = needsTarget ? 'block' : 'none';
@@ -65,34 +64,89 @@ function onAlgoChange() {
     }
 }
 
-// Logique de clic cyclique sur un nœud (Départ 🚗 ➔ Arrivée 🏁 ➔ Rien)
-function handleNodeClick(nodeId) {
-    const algoName = document.getElementById('algo-select').value;
-    const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall'].includes(algoName);
+function strEquals(str1, str2) {
+    return String(str1 || '').toLowerCase() === String(str2 || '').toLowerCase();
+}
 
-    if (selectedStartNode === null) {
-        selectedStartNode = nodeId;
-        setNodeMarkerIcon(nodeId, 'car');
-    } else if (selectedStartNode === nodeId && selectedTargetNode === null) {
-        selectedStartNode = null;
-        resetAllMarkersIcons();
-    } else if (selectedTargetNode === null && needsTarget) {
-        selectedTargetNode = nodeId;
-        setNodeMarkerIcon(nodeId, 'flag');
+// Remplissage automatique de la liste déroulante des casernes pour le menu Intervention
+function populateCasernesDropdowns() {
+    const selectEl = document.getElementById('inter-start-select');
+    if (!selectEl) return;
+
+    const casernes = sitesData.filter(s => strEquals(s.type, 'caserne'));
+    const sourceList = casernes.length > 0 ? casernes : sitesData;
+
+    selectEl.innerHTML = '';
+    sourceList.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.text = `🏢 ${s.nom || 'Caserne ' + s.id} (ID: ${s.id})`;
+        selectEl.appendChild(option);
+    });
+}
+
+// Changement manuel de la caserne dans le menu Intervention
+function onCaserneSelectChange(nodeId) {
+    if (currentActiveTab === 'intervention') {
+        selectedStartNode = isNaN(nodeId) ? nodeId : Number(nodeId);
+        refreshVisualMarkers();
+        updateSelectionUI();
+    }
+}
+
+// Clic sur un sommet de la carte : comportement dynamique selon l'onglet actif
+function handleNodeClick(nodeId) {
+    const activeTab = (typeof currentActiveTab !== 'undefined') ? currentActiveTab : 'algo';
+
+    if (activeTab === 'intervention') {
+        // Mode Intervention : Départ verrouillé sur le select, le clic définit uniquement l'Arrivée
+        if (selectedTargetNode === nodeId) {
+            selectedTargetNode = null;
+        } else {
+            selectedTargetNode = nodeId;
+        }
     } else {
-        selectedStartNode = null;
-        selectedTargetNode = null;
-        resetAllMarkersIcons();
+        // Mode Algorithmes (ou autre) : Clic libre (Clic 1 = Départ 🚗, Clic 2 = Arrivée 🏁, Clic 3 = Reset)
+        const algoName = document.getElementById('algo-select')?.value || 'dijkstra';
+        const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall', 'bfs'].includes(algoName);
+
+        if (selectedStartNode === null) {
+            selectedStartNode = nodeId;
+        } else if (selectedStartNode === nodeId && selectedTargetNode === null) {
+            selectedStartNode = null;
+        } else if (selectedTargetNode === null && needsTarget) {
+            selectedTargetNode = nodeId;
+        } else {
+            selectedStartNode = nodeId;
+            selectedTargetNode = null;
+        }
     }
 
+    refreshVisualMarkers();
     updateSelectionUI();
+}
+
+function refreshVisualMarkers() {
+    resetAllMarkersIcons();
+    if (selectedStartNode !== null) {
+        setNodeMarkerIcon(selectedStartNode, 'car');
+    }
+    if (selectedTargetNode !== null) {
+        setNodeMarkerIcon(selectedTargetNode, 'flag');
+    }
 }
 
 function updateSelectionUI() {
     const startEl = document.getElementById('label-start');
     const targetEl = document.getElementById('label-target');
-    if (startEl) startEl.innerText = selectedStartNode !== null ? selectedStartNode : "Aucun";
-    if (targetEl) targetEl.innerText = selectedTargetNode !== null ? selectedTargetNode : "Aucun";
+    const interTarget = document.getElementById('inter-target');
+
+    const startVal = selectedStartNode !== null ? selectedStartNode : "Aucun";
+    const targetVal = selectedTargetNode !== null ? selectedTargetNode : "Aucun";
+
+    if (startEl) startEl.innerText = startVal;
+    if (targetEl) targetEl.innerText = targetVal;
+    if (interTarget) interTarget.innerText = targetVal;
 }
 
 function setNodeMarkerIcon(nodeId, type) {

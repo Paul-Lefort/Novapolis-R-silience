@@ -105,65 +105,61 @@
                 </div>
 
                 <!-- 3. Onglet Import -->
-<div id="tab-import" class="sidebar-tab-content" style="display: none;">
-    <div class="sidebar-section">
-        <h3>📥 Import de Fichiers CSV</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Sélectionnez vos fichiers de données :</p>
+                <div id="tab-import" class="sidebar-tab-content" style="display: none;">
+                    <div class="sidebar-section">
+                        <h3>📥 Import de Fichiers CSV</h3>
+                        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Sélectionnez vos fichiers de données :</p>
 
-        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
-            <div>
-                <label>Sites :</label>
-                <input type="file" id="import-sites" accept=".csv" style="width: 100%; margin-top: 2px;">
-            </div>
-            <div>
-                <label>Routes :</label>
-                <input type="file" id="import-routes" accept=".csv" style="width: 100%; margin-top: 2px;">
-            </div>
-            <div>
-                <label>Fibre :</label>
-                <input type="file" id="import-fibre" accept=".csv" style="width: 100%; margin-top: 2px;">
-            </div>
-        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+                            <div>
+                                <label>Sites :</label>
+                                <input type="file" id="import-sites" accept=".csv" style="width: 100%; margin-top: 2px;">
+                            </div>
+                            <div>
+                                <label>Routes :</label>
+                                <input type="file" id="import-routes" accept=".csv" style="width: 100%; margin-top: 2px;">
+                            </div>
+                            <div>
+                                <label>Fibre :</label>
+                                <input type="file" id="import-fibre" accept=".csv" style="width: 100%; margin-top: 2px;">
+                            </div>
+                        </div>
 
-        <button onclick="submitMultiFileImport()" style="width: 100%; margin-top: 12px; padding: 8px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-            📂 Envoyer les fichiers au serveur
-        </button>
+                        <button onclick="submitMultiFileImport()" style="width: 100%; margin-top: 12px; padding: 8px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                            📂 Envoyer les fichiers au serveur
+                        </button>
 
-        <hr style="margin: 15px 0; border: none; border-top: 1px solid #dee2e6;">
+                        <hr style="margin: 15px 0; border: none; border-top: 1px solid #dee2e6;">
 
-        <!-- Section Import de Scénario Rapide -->
-        <h3>🎬 Scénarios Prédéfinis</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 8px;"> Charger un scénario de test :</p>
-        <button onclick="loadPresetScenario('standard')" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 6px;">
-            ⚡ Charger le Scénario Standard (120 sites)
-        </button>
+                        <!-- Section Import de Scénario Rapide -->
+                        <h3>🎬 Scénarios Prédéfinis</h3>
+                        <p style="font-size: 12px; color: #666; margin-bottom: 8px;"> Charger un scénario de test :</p>
+                        <button onclick="loadPresetScenario('standard')" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 6px;">
+                            ⚡ Charger le Scénario Standard (120 sites)
+                        </button>
 
-        <span id="import-status" style="font-size: 11px; display: block; margin-top: 6px; color: #666;"></span>
-    </div>
-</div>
+                        <span id="import-status" style="font-size: 11px; display: block; margin-top: 6px; color: #666;"></span>
+                    </div>
+                </div>
 
-                <!-- 4. Onglet Statistiques -->
+                <!-- 4. Onglet Statistiques & Analyses Avancées -->
                 <div id="tab-stats" class="sidebar-tab-content" style="display: none;">
                     <div class="sidebar-section">
-                        <h3>📊 Statistiques</h3>
-                        <div id="stats-info" style="font-size: 13px; color: #5f6368;">Chargement...</div>
+                        <h3>📊 Analyses & Indicateurs (DFS/BFS)</h3>
+                        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                            Évalue l'accessibilité, les composantes connexes, la présence de cycles et les zones d'isolement.
+                        </p>
+                        <button onclick="fetchNetworkReport()" style="width: 100%; padding: 10px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            🔍 Calculer les 5 indicateurs
+                        </button>
+                        <div id="stats-info" style="font-size: 13px; color: #334043; line-height: 1.4;">
+                            Cliquez sur le bouton pour générer le rapport complet de connexité et d'analyse du réseau.
+                        </div>
                     </div>
                 </div>
 
             </div>
         </aside>
-                <!-- Onglet Statistiques & Analyses Avancées -->
-<div id="tab-stats" class="sidebar-tab-content" style="display: none;">
-    <div class="sidebar-section">
-        <h3>📊 Analyses & Indicateurs (DFS/BFS)</h3>
-        <button onclick="fetchNetworkReport()" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 10px;">
-            🔍 Lancer l'analyse du réseau
-        </button>
-        <div id="stats-info" style="font-size: 13px; color: #334043; line-height: 1.4;">
-            Cliquez sur le bouton pour afficher les rapports d'accessibilité, de cycles et de connexité.
-        </div>
-    </div>
-</div>
 
         <!-- Zone principale de la carte -->
         <main class="map-main-content">
@@ -190,10 +186,10 @@
         </div>
     </div>
 
-    <!-- Scripts JS -->
+<!-- Scripts JS ordonnés -->
     <script src="/static/js/graphRender.js"></script>
     <script src="/static/js/api.js"></script>
-    <script src="/static/js/main.js"></script>
     <script src="/static/js/algorithms.js"></script>
+    <script src="/static/js/main.js"></script>
 </body>
 </html>

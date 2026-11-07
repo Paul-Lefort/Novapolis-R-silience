@@ -89,8 +89,6 @@ async function loadNetworkData() {
     }
 }
 
-// ==================== EXPORT & IMPORT ====================
-
 function downloadZipArchive() {
     window.location.href = '/api/download/all';
 }
@@ -159,7 +157,6 @@ async function loadPresetScenario(scenarioName) {
         }
         setLoadingMessage(`Génération et application du scénario ${scenarioName}...`);
 
-        // On utilise la route de génération existante sur le serveur comme scénario par défaut
         const response = await fetch(`/api/generate?nombre_sites=120`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
@@ -186,24 +183,76 @@ async function fetchNetworkReport() {
     const statsContainer = document.getElementById('stats-info');
     statsContainer.innerHTML = "Calcul des indicateurs en cours...";
 
-    try {
-        const response = await fetch('/api/analysis/report', { method: 'POST' });
-        if (!response.ok) throw new Error("Erreur lors de la récupération du rapport");
+    const activeView = (typeof currentView !== 'undefined' && currentView) ? currentView : 'routier';
 
-        const data = await response.json();
+    try {
+        const response = await fetch(`/api/analysis/report?view=${activeView}`, {
+            method: 'GET'
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Erreur serveur lors de la récupération du rapport");
+        }
+
+        const responseData = await response.json();
+        const data = responseData.result || responseData.data || responseData;
+
+        const casernes = data.casernes_reference || [];
+        const sitesIsoles = data.sites_isoles || [];
+        const nonAtteignables = data.sites_non_atteignables || [];
+
+        // Tracé automatique en ROUGE des sites hors de portée
+        if (typeof highlightUnreachableNodes === 'function') {
+            highlightUnreachableNodes(nonAtteignables);
+        }
+
+        const listIsoles = sitesIsoles.length > 0
+            ? `<b style="color: #ea4335;">${sitesIsoles.join(', ')}</b>`
+            : '<i>Aucun</i>';
+
+        const listNonAtteignables = nonAtteignables.length > 0
+            ? `<b style="color: #ea4335;">${nonAtteignables.join(', ')}</b><br>
+               <button onclick="highlightUnreachableNodes([${nonAtteignables.join(',')}])" style="margin-top: 6px; padding: 4px 10px; font-size: 11px; background: #ea4335; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                   📍 Afficher les ${nonAtteignables.length} sites en rouge
+               </button>`
+            : '<i>Tous les sites sont couverts !</i>';
 
         statsContainer.innerHTML = `
-            <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border: 1px solid #dadce0;">
-                <p><b>Casernes de référence :</b> ${data.casernes_reference.join(', ')}</p>
-                <p><b>Sites accessibles :</b> ${data.nb_sites_accessibles}</p>
-                <p><b>Composantes fibre :</b> ${data.nb_composantes_fibre}</p>
-                <p><b>Cycles orientés (routes) :</b> ${data.cycles_orientes ? '⚠️ Présents' : '✅ Aucun'}</p>
-                <p><b>Sites isolés :</b> ${data.sites_isoles.length}</p>
-                <p><b>Non atteignables :</b> ${data.sites_non_atteignables.length}</p>
+            <div style="background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #dadce0; display: flex; flex-direction: column; gap: 10px;">
+                <p style="margin: 0; font-size: 11px; color: #5f6368;"><b>Vue analysée :</b> ${activeView.toUpperCase()}</p>
+
+                <div style="border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                    <b style="color: #1a73e8;">1. Accessibilité des secours (BFS)</b><br>
+                    <span style="font-size: 12px;">Casernes détectées : <b>${casernes.join(', ') || 'Aucune'}</b></span><br>
+                    <span style="font-size: 12px;">Sites couverts : <b>${data.nb_sites_accessibles ?? 0}</b></span>
+                </div>
+
+                <div style="border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                    <b style="color: #1a73e8;">2. Connexité Fibre (DFS)</b><br>
+                    <span style="font-size: 12px;">Composantes connexes : <b>${data.nb_composantes_fibre ?? 0}</b></span>
+                </div>
+
+                <div style="border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                    <b style="color: #1a73e8;">3. Itinéraire min. arcs (BFS)</b><br>
+                    <span style="font-size: 11px; color: #5f6368;">Sélectionnez <b>BFS</b> dans l'onglet <b>Algorithmes 🚀</b> pour tracer l'itinéraire minimisant le nombre de sauts.</span>
+                </div>
+
+                <div style="border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                    <b style="color: #1a73e8;">4. Cycles orientés (DFS)</b><br>
+                    <span style="font-size: 12px;">Statut : ${data.cycles_orientes ? '⚠️ <b style="color:#d93025;">Cycles détectés</b>' : '✅ <b style="color:#188038;">Graphe Acyclique (DAG)</b>'}</span>
+                </div>
+
+                <div>
+                    <b style="color: #1a73e8;">5. Défaut de couverture & Isolation</b><br>
+                    <span style="font-size: 12px;">Sites non atteignables : <b>${nonAtteignables.length}</b></span><br>
+                    <div style="font-size: 11px; margin-top: 2px;">${listNonAtteignables}</div>
+                    <span style="font-size: 12px; margin-top: 6px; display: block;">Sites isolés (degré 0) : ${listIsoles}</span>
+                </div>
             </div>
         `;
     } catch (error) {
         console.error(error);
-        statsContainer.innerHTML = `<span style="color: red;">Erreur : ${error.message}</span>`;
+        statsContainer.innerHTML = `<span style="color: #d93025; font-weight: 500;">Erreur : ${error.message}</span>`;
     }
 }

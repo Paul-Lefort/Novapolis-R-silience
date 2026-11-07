@@ -1,4 +1,4 @@
-// main.js - Point d'entrée principal de l'application
+// main.js - Point d'entrée principal et gestion des états globaux
 
 let map = null;
 let edgeLayer = null, arrowLayer = null, nodeLayer = null, legendEl = null;
@@ -71,19 +71,15 @@ function handleNodeClick(nodeId) {
     const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall'].includes(algoName);
 
     if (selectedStartNode === null) {
-        // 1er clic : Définir le départ (Voiture)
         selectedStartNode = nodeId;
         setNodeMarkerIcon(nodeId, 'car');
     } else if (selectedStartNode === nodeId && selectedTargetNode === null) {
-        // Re-clic sur le départ sans arrivée : Effacer tout
         selectedStartNode = null;
         resetAllMarkersIcons();
     } else if (selectedTargetNode === null && needsTarget) {
-        // 2ème clic : Définir l'arrivée (Drapeau)
         selectedTargetNode = nodeId;
         setNodeMarkerIcon(nodeId, 'flag');
     } else {
-        // 3ème clic (ou 2ème si l'algorithme n'a pas besoin de cible) : Réinitialisation complète
         selectedStartNode = null;
         selectedTargetNode = null;
         resetAllMarkersIcons();
@@ -99,7 +95,6 @@ function updateSelectionUI() {
     if (targetEl) targetEl.innerText = selectedTargetNode !== null ? selectedTargetNode : "Aucun";
 }
 
-// Modification visuelle des marqueurs (à lier avec graphRender.js)
 function setNodeMarkerIcon(nodeId, type) {
     if (typeof updateMarkerVisual === 'function') {
         updateMarkerVisual(nodeId, type);
@@ -109,68 +104,6 @@ function setNodeMarkerIcon(nodeId, type) {
 function resetAllMarkersIcons() {
     if (typeof resetMarkersVisual === 'function') {
         resetMarkersVisual();
-    }
-}
-
-// Exécution de l'algorithme sélectionné via l'API
-async function runSelectedAlgorithm() {
-    const algoName = document.getElementById('algo-select').value;
-    const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall'].includes(algoName);
-
-    if (!selectedStartNode) {
-        alert("Veuillez sélectionner un sommet de départ 🚗 sur la carte.");
-        return;
-    }
-    if (needsTarget && !selectedTargetNode) {
-        alert("Veuillez sélectionner un sommet d'arrivée 🏁 sur la carte pour cet algorithme.");
-        return;
-    }
-
-    // Construction du payload à partir des données actuelles du graphe
-    const nodes = sitesData.map(s => s.id);
-    const rawEdges = currentView === 'fibre' ? fibreData : routesData;
-    const edges = rawEdges.map((r, index) => ({
-        id: `e${index}`,
-        source: r.u,
-        target: r.v,
-        weight: Number(r.distance_km ?? r.cost ?? r.temps_normal ?? 1)
-    }));
-
-    const payload = {
-        graph: {
-            nodes: nodes,
-            edges: edges,
-            start: isNaN(selectedStartNode) ? selectedStartNode : Number(selectedStartNode),
-            target: selectedTargetNode !== null ? (isNaN(selectedTargetNode) ? selectedTargetNode : Number(selectedTargetNode)) : undefined
-        }
-    };
-
-    try {
-        setLoadingMessage(`Exécution de ${algoName}...`);
-        const response = await fetch(`/api/run/${algoName}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || "Erreur lors du calcul de l'algorithme");
-        }
-
-        const data = await response.json();
-        console.log("Résultat de l'algorithme :", data);
-
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) overlay.style.display = 'none';
-
-        alert(`Algorithme ${algoName} exécuté avec succès ! (${data.step_count} étapes générées)`);
-
-    } catch (error) {
-        console.error("Erreur:", error);
-        alert(`Erreur : ${error.message}`);
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) overlay.style.display = 'none';
     }
 }
 

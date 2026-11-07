@@ -7,6 +7,7 @@ const STYLES = {
 
 let nodeMarkers = {};
 let pathLayer = null;
+let unreachableLayer = null;
 
 function initMap() {
     map = L.map('network-container', {
@@ -21,6 +22,7 @@ function initMap() {
     arrowLayer = L.layerGroup().addTo(map);
     nodeLayer = L.layerGroup().addTo(map);
     pathLayer = L.layerGroup().addTo(map);
+    unreachableLayer = L.layerGroup().addTo(map);
 
     map.on('zoomend', drawArrows);
 
@@ -50,7 +52,8 @@ function drawRouteEdges(rows, sitesMap) {
     const directedEdges = new Set(rows.map(r => `${String(r.u)}_${String(r.v)}`));
 
     rows.forEach(row => {
-        const posU = sitesMap.get(row.u), posV = sitesMap.get(row.v);
+        const posU = sitesMap.get(row.u) || sitesMap.get(Number(row.u)) || sitesMap.get(String(row.u));
+        const posV = sitesMap.get(row.v) || sitesMap.get(Number(row.v)) || sitesMap.get(String(row.v));
         if (!posU || !posV) return;
         count++;
 
@@ -75,7 +78,8 @@ function drawRouteEdges(rows, sitesMap) {
 function drawFibreEdges(rows, sitesMap) {
     let count = 0;
     rows.forEach(row => {
-        const posU = sitesMap.get(row.u), posV = sitesMap.get(row.v);
+        const posU = sitesMap.get(row.u) || sitesMap.get(Number(row.u)) || sitesMap.get(String(row.u));
+        const posV = sitesMap.get(row.v) || sitesMap.get(Number(row.v)) || sitesMap.get(String(row.v));
         if (!posU || !posV) return;
         count++;
 
@@ -133,6 +137,7 @@ function renderGraph(type, fit = false) {
     edgeLayer.clearLayers();
     nodeLayer.clearLayers();
     if (pathLayer) pathLayer.clearLayers();
+    if (unreachableLayer) unreachableLayer.clearLayers();
     arrowData = [];
     nodeMarkers = {};
 
@@ -143,6 +148,8 @@ function renderGraph(type, fit = false) {
         const lon = site.longitude ?? site.lon ?? site.x;
         if (lat == null || lon == null) return;
         sitesMap.set(site.id, [lat, lon]);
+        sitesMap.set(String(site.id), [lat, lon]);
+        sitesMap.set(Number(site.id), [lat, lon]);
         bounds.push([lat, lon]);
     });
 
@@ -168,6 +175,8 @@ function renderGraph(type, fit = false) {
         });
 
         nodeMarkers[site.id] = marker;
+        nodeMarkers[String(site.id)] = marker;
+        nodeMarkers[Number(site.id)] = marker;
         marker.addTo(nodeLayer);
     });
 
@@ -177,7 +186,7 @@ function renderGraph(type, fit = false) {
     if (fit && bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] });
 
     const stats = document.getElementById('stats-info');
-    if (stats) stats.innerText = `${sitesMap.size} sites & ${nbEdges} connexions`;
+    if (stats) stats.innerText = `${sitesData.length} sites & ${nbEdges} connexions`;
 }
 
 function highlightPath(pathNodeIds) {
@@ -192,15 +201,19 @@ function highlightPath(pathNodeIds) {
     sitesData.forEach(site => {
         const lat = site.latitude ?? site.lat;
         const lon = site.longitude ?? site.lon ?? site.x;
-        if (lat != null && lon != null) sitesMap.set(site.id, [lat, lon]);
+        if (lat != null && lon != null) {
+            sitesMap.set(site.id, [lat, lon]);
+            sitesMap.set(String(site.id), [lat, lon]);
+            sitesMap.set(Number(site.id), [lat, lon]);
+        }
     });
 
     for (let i = 0; i < pathNodeIds.length - 1; i++) {
         const u = pathNodeIds[i];
         const v = pathNodeIds[i + 1];
 
-        const posU = sitesMap.get(u);
-        const posV = sitesMap.get(v);
+        const posU = sitesMap.get(u) || sitesMap.get(String(u)) || sitesMap.get(Number(u));
+        const posV = sitesMap.get(v) || sitesMap.get(String(v)) || sitesMap.get(Number(v));
 
         if (posU && posV) {
             const pathLine = L.polyline([posU, posV], {
@@ -213,8 +226,49 @@ function highlightPath(pathNodeIds) {
     }
 }
 
+// Surlignage en ROUGE des nœuds non atteignables
+function highlightUnreachableNodes(nodeIds) {
+    if (!unreachableLayer) {
+        unreachableLayer = L.layerGroup().addTo(map);
+    }
+    unreachableLayer.clearLayers();
+
+    if (!nodeIds || nodeIds.length === 0) return;
+
+    const sitesMap = new Map();
+    sitesData.forEach(site => {
+        const lat = site.latitude ?? site.lat;
+        const lon = site.longitude ?? site.lon ?? site.x;
+        if (lat != null && lon != null) {
+            sitesMap.set(site.id, [lat, lon]);
+            sitesMap.set(String(site.id), [lat, lon]);
+            sitesMap.set(Number(site.id), [lat, lon]);
+        }
+    });
+
+    nodeIds.forEach(id => {
+        const pos = sitesMap.get(id) || sitesMap.get(String(id)) || sitesMap.get(Number(id));
+        if (pos) {
+            const alertMarker = L.circleMarker(pos, {
+                radius: 11,
+                fillColor: '#EA4335',
+                color: '#ffffff',
+                weight: 3,
+                fillOpacity: 0.95
+            });
+
+            alertMarker.bindTooltip(`⚠️ Non atteignable : ID ${id}`, {
+                permanent: true,
+                direction: 'top'
+            });
+
+            unreachableLayer.addLayer(alertMarker);
+        }
+    });
+}
+
 function updateMarkerVisual(nodeId, type) {
-    const marker = nodeMarkers[nodeId];
+    const marker = nodeMarkers[nodeId] || nodeMarkers[String(nodeId)] || nodeMarkers[Number(nodeId)];
     if (!marker) return;
 
     if (type === 'car') {
@@ -251,4 +305,5 @@ function resetMarkersVisual() {
         }
     });
     if (pathLayer) pathLayer.clearLayers();
+    if (unreachableLayer) unreachableLayer.clearLayers();
 }

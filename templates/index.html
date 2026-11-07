@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/algorithm-demo.css">
 
     <!-- Leaflet CSS & JS (Remplace Vis.js) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -50,8 +51,63 @@
             <div id="stats-info" style="font-size: 13px; color: #5f6368;">Chargement...</div>
         </div>
 
-        <!-- Emplacement de la carte Leaflet -->
-        <div id="network-container"></div>
+        <!-- Espace de travail intégré : carte et démonstration côte à côte -->
+        <div class="workspace-layout">
+            <section class="map-workspace" aria-label="Carte du réseau">
+                <div id="network-container"></div>
+            </section>
+
+            <aside id="algorithm-panel" class="algorithm-panel" aria-label="Démonstrations des algorithmes">
+                <div class="algorithm-panel-header">
+                    <div><strong>Laboratoire d’algorithmes</strong><small>Exécution commentée sur le réseau affiché</small></div>
+                    <span class="algorithm-live-indicator">● Prêt</span>
+                </div>
+                <div class="algorithm-panel-scroll">
+                    <div class="algorithm-form">
+                        <label for="algorithm-select">Algorithme</label>
+                        <select id="algorithm-select">
+                            <option value="dfs">Parcours en profondeur (DFS)</option>
+                            <option value="bfs">Parcours en largeur (BFS)</option>
+                            <option value="dijkstra">Dijkstra</option>
+                            <option value="bellman-ford">Bellman-Ford</option>
+                            <option value="floyd-warshall">Floyd-Warshall</option>
+                            <option value="kruskal">Kruskal</option>
+                            <option value="prim">Prim</option>
+                        </select>
+                        <label for="algorithm-weight">Poids utilisé</label>
+                        <select id="algorithm-weight"></select>
+                        <label for="algorithm-start">Sommet de départ (si nécessaire)</label>
+                        <select id="algorithm-start"></select>
+                        <button id="algorithm-run" class="algorithm-run-btn" type="button">▶ Lancer la démonstration</button>
+                        <p id="algorithm-error" class="algorithm-error" role="alert"></p>
+                    </div>
+                    <section class="algorithm-player">
+                        <div class="algorithm-section-title"><strong>Déroulement</strong><span id="algorithm-step-count">0 / 0</span></div>
+                        <h3 id="algorithm-step-title">En attente</h3>
+                        <p id="algorithm-step-explanation">Choisissez un algorithme puis lancez la démonstration.</p>
+                        <div class="algorithm-comment" id="algorithm-step-comment"><strong>À comprendre</strong><span>Les explications pédagogiques apparaîtront ici à chaque étape.</span></div>
+                        <input id="algorithm-step-range" type="range" min="0" max="0" value="0" disabled aria-label="Étape courante">
+                        <div class="algorithm-controls">
+                            <button type="button" id="algorithm-first" title="Première étape">|◀</button>
+                            <button type="button" id="algorithm-prev" title="Étape précédente">◀</button>
+                            <button type="button" id="algorithm-play" title="Lecture">▶ Lecture</button>
+                            <button type="button" id="algorithm-next" title="Étape suivante">▶</button>
+                            <button type="button" id="algorithm-last" title="Dernière étape">▶|</button>
+                        </div>
+                        <div id="algorithm-step-details" class="algorithm-step-details"></div>
+                        <details class="algorithm-result"><summary>Résultat final</summary><pre id="algorithm-result-json">Aucun résultat.</pre></details>
+                    </section>
+                    <section class="algorithm-resolution-actions">
+                        <strong>Tableau de résolution</strong>
+                        <p>Consultez toutes les étapes dans un onglet indépendant ou exportez-les.</p>
+                        <div class="algorithm-export-buttons">
+                            <button type="button" id="algorithm-open-table" disabled>↗ Afficher le tableau</button>
+                            <button type="button" id="algorithm-export-csv" disabled>↓ Télécharger CSV</button>
+                        </div>
+                    </section>
+                </div>
+            </aside>
+        </div>
     </div>
 
     <div class="modal-overlay" id="generate-modal">
@@ -141,6 +197,7 @@
                     setTimeout(() => overlay.style.display = 'none', 300);
                 }
                 renderGraph(currentView, true);
+                if (window.AlgorithmDemo) window.AlgorithmDemo.refreshOptions();
             } catch (error) {
                 console.error("Erreur de chargement:", error);
                 setLoadingMessage("Erreur lors de la récupération des CSV.", true);
@@ -260,12 +317,28 @@
                 if (btn) btn.classList.toggle('active', t === type);
             });
             renderGraph(type);
+            if (window.AlgorithmDemo) window.AlgorithmDemo.refreshOptions();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             initMap();
             loadNetworkData();
         });
+
+        // Interface publique minimale utilisée par algorithmDemo.js.
+        window.NovapolisGraph = {
+            getMap: () => map,
+            getSites: () => sitesData,
+            getRoutes: () => routesData,
+            getFibre: () => fibreData,
+            getCurrentView: () => currentView,
+            getPosition: (site) => {
+                const lat = site.latitude ?? site.lat;
+                const lon = site.longitude ?? site.lon ?? site.x;
+                return (lat == null || lon == null) ? null : [Number(lat), Number(lon)];
+            }
+        };
     </script>
+    <script src="/static/js/algorithmDemo.js"></script>
 </body>
 </html>

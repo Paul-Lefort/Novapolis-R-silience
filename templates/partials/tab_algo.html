@@ -1,0 +1,22 @@
+{# Menu « algo » (icône de la sidebar) #}
+<section id="tab-algo" class="sidebar-tab-content" hidden>
+    <div class="sidebar-section">
+        <h3>Algorithmes de Cheminement</h3>
+        <div class="stack">
+            <select id="algo-select" class="sidebar-select" data-change="algo-changed">
+                <option value="dijkstra">Dijkstra (Référence - Poids positifs)</option>
+                <option value="bellman_ford">Bellman-Ford (Détection de cycles négatifs)</option>
+                <option value="floyd_warshall">Floyd-Warshall (Tous couples V x V)</option>
+                <option value="bfs">BFS (Minimiser nombre d'arcs)</option>
+                <option value="dfs">DFS (Exploration en profondeur)</option>
+            </select>
+
+            <div class="selection-status">
+                <div>Départ : <span id="label-start">Aucun</span></div>
+                <div id="target-container">Arrivée : <span id="label-target">Aucun</span></div>
+            </div>
+
+            <button class="btn btn-lg btn-blue" data-action="run-algo">Lancer l'algorithme</button>
+        </div>
+    </div>
+</section>

@@ -1,167 +1,52 @@
-// main.js - Point d'entrée principal et gestion des états globaux
+// main.js - Point d'entrée : initialisation et câblage des événements (délégation via data-action)
 
-let map = null;
-let edgeLayer = null, arrowLayer = null, nodeLayer = null, legendEl = null;
-let sitesData = [], routesData = [], fibreData = [];
-let arrowData = [];
-let currentView = 'routier';
+import { initMap } from './map/mapView.js';
+import { openModal, closeModal } from './ui/overlay.js';
+import { handleNodeClick, onCaserneChange } from './ui/selection.js';
+import { switchView, toggleTab } from './ui/sidebar.js';
+import * as dataset from './features/dataset.js';
+import * as algorithms from './features/algorithms.js';
+import * as intervention from './features/intervention.js';
+import * as fibre from './features/fibre.js';
+import * as report from './features/report.js';
 
-// États pour les algorithmes
-let selectedStartNode = null;
-let selectedTargetNode = null;
+// data-action="..." -> handler (reçoit l'élément cliqué)
+const clickActions = {
+    'open-modal': openModal,
+    'close-modal': closeModal,
+    'submit-generation': dataset.submitGeneration,
+    'toggle-tab': (el) => toggleTab(el.dataset.tab),
+    'switch-view': (el) => switchView(el.dataset.view),
+    'run-algo': algorithms.runSelectedAlgorithm,
+    'run-intervention': intervention.runIntervention,
+    'run-acm': fibre.runAcm,
+    'compare-acm': fibre.runCompare,
+    'simulate-breakdown': fibre.runBreakdown,
+    'download-zip': dataset.downloadZip,
+    'download-file': (el) => dataset.downloadSingle(el.dataset.file),
+    'import-files': dataset.submitImport,
+    'load-preset': (el) => dataset.loadPresetScenario(el.dataset.scenario),
+    'run-report': report.runReport,
+    'show-unreachable': report.showUnreachable,
+};
 
-function setLoadingMessage(msg, isError = false) {
-    const el = document.getElementById('loading-msg');
-    if (el) {
-        el.innerText = msg;
-        if (isError) el.style.color = '#d93025';
-    }
-}
+// data-change="..." -> handler (reçoit l'élément modifié)
+const changeActions = {
+    'algo-changed': algorithms.onAlgoChange,
+    'caserne-changed': (el) => onCaserneChange(el.value),
+};
 
-function openModal() {
-    const modal = document.getElementById('generate-modal');
-    if (modal) modal.style.display = 'flex';
-}
-
-function closeModal() {
-    const modal = document.getElementById('generate-modal');
-    if (modal) modal.style.display = 'none';
-}
-
-function switchView(type) {
-    ['routier', 'fibre'].forEach(t => {
-        const btn = document.getElementById('btn-' + t);
-        if (btn) btn.classList.toggle('active', t === type);
+function bindEvents() {
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-action]');
+        if (el) clickActions[el.dataset.action]?.(el);
     });
-    currentView = type;
-    if (typeof renderGraph === 'function') {
-        renderGraph(type);
-    }
-}
-
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
-
-    setTimeout(() => {
-        if (typeof map !== 'undefined' && map !== null) {
-            map.invalidateSize();
-        }
-    }, 300);
-}
-
-function onAlgoChange() {
-    const algoName = document.getElementById('algo-select').value;
-    const targetContainer = document.getElementById('target-container');
-    const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall', 'bfs'].includes(algoName);
-
-    if (targetContainer) {
-        targetContainer.style.display = needsTarget ? 'block' : 'none';
-    }
-    if (!needsTarget) {
-        selectedTargetNode = null;
-        updateSelectionUI();
-    }
-}
-
-function strEquals(str1, str2) {
-    return String(str1 || '').toLowerCase() === String(str2 || '').toLowerCase();
-}
-
-// Remplissage automatique de la liste déroulante des casernes pour le menu Intervention
-function populateCasernesDropdowns() {
-    const selectEl = document.getElementById('inter-start-select');
-    if (!selectEl) return;
-
-    const casernes = sitesData.filter(s => strEquals(s.type, 'caserne'));
-    const sourceList = casernes.length > 0 ? casernes : sitesData;
-
-    selectEl.innerHTML = '';
-    sourceList.forEach(s => {
-        const option = document.createElement('option');
-        option.value = s.id;
-        option.text = `🏢 ${s.nom || 'Caserne ' + s.id} (ID: ${s.id})`;
-        selectEl.appendChild(option);
+    document.addEventListener('change', (e) => {
+        const el = e.target.closest('[data-change]');
+        if (el) changeActions[el.dataset.change]?.(el);
     });
 }
 
-// Changement manuel de la caserne dans le menu Intervention
-function onCaserneSelectChange(nodeId) {
-    if (currentActiveTab === 'intervention') {
-        selectedStartNode = isNaN(nodeId) ? nodeId : Number(nodeId);
-        refreshVisualMarkers();
-        updateSelectionUI();
-    }
-}
-
-// Clic sur un sommet de la carte : comportement dynamique selon l'onglet actif
-function handleNodeClick(nodeId) {
-    const activeTab = (typeof currentActiveTab !== 'undefined') ? currentActiveTab : 'algo';
-
-    if (activeTab === 'intervention') {
-        // Mode Intervention : Départ verrouillé sur le select, le clic définit uniquement l'Arrivée
-        if (selectedTargetNode === nodeId) {
-            selectedTargetNode = null;
-        } else {
-            selectedTargetNode = nodeId;
-        }
-    } else {
-        // Mode Algorithmes (ou autre) : Clic libre (Clic 1 = Départ 🚗, Clic 2 = Arrivée 🏁, Clic 3 = Reset)
-        const algoName = document.getElementById('algo-select')?.value || 'dijkstra';
-        const needsTarget = ['dijkstra', 'bellman_ford', 'floyd_warshall', 'bfs'].includes(algoName);
-
-        if (selectedStartNode === null) {
-            selectedStartNode = nodeId;
-        } else if (selectedStartNode === nodeId && selectedTargetNode === null) {
-            selectedStartNode = null;
-        } else if (selectedTargetNode === null && needsTarget) {
-            selectedTargetNode = nodeId;
-        } else {
-            selectedStartNode = nodeId;
-            selectedTargetNode = null;
-        }
-    }
-
-    refreshVisualMarkers();
-    updateSelectionUI();
-}
-
-function refreshVisualMarkers() {
-    resetAllMarkersIcons();
-    if (selectedStartNode !== null) {
-        setNodeMarkerIcon(selectedStartNode, 'car');
-    }
-    if (selectedTargetNode !== null) {
-        setNodeMarkerIcon(selectedTargetNode, 'flag');
-    }
-}
-
-function updateSelectionUI() {
-    const startEl = document.getElementById('label-start');
-    const targetEl = document.getElementById('label-target');
-    const interTarget = document.getElementById('inter-target');
-
-    const startVal = selectedStartNode !== null ? selectedStartNode : "Aucun";
-    const targetVal = selectedTargetNode !== null ? selectedTargetNode : "Aucun";
-
-    if (startEl) startEl.innerText = startVal;
-    if (targetEl) targetEl.innerText = targetVal;
-    if (interTarget) interTarget.innerText = targetVal;
-}
-
-function setNodeMarkerIcon(nodeId, type) {
-    if (typeof updateMarkerVisual === 'function') {
-        updateMarkerVisual(nodeId, type);
-    }
-}
-
-function resetAllMarkersIcons() {
-    if (typeof resetMarkersVisual === 'function') {
-        resetMarkersVisual();
-    }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    loadNetworkData();
-});
+initMap(handleNodeClick);
+bindEvents();
+dataset.loadNetworkData();

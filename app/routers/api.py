@@ -165,18 +165,6 @@ def execute_algorithm_logic(algo_name: str, request: RunRequest, view: str):
         raise HTTPException(status_code=404, detail=f"Algorithme {algo_name} inconnu.")
 
 
-@router.post("/run/{algo_name}")
-def run_algorithm_generic(algo_name: str, request: RunRequest, view: str = Query("routier")):
-    logger.info(f"[DEBUG API] POST /run/{algo_name}?view={view}")
-    try:
-        return execute_algorithm_logic(algo_name, request, view)
-    except HTTPException as he:
-        raise he
-    except Exception as exc:
-        logger.error(f"[DEBUG API] Erreur inattendue dans /run/{algo_name} : {str(exc)}")
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
 @router.post("/run-network/{algo_name}")
 def run_network_algorithm_generic(algo_name: str, request: RunRequest, view: str = Query("routier")):
     logger.info(f"[DEBUG API] POST /run-network/{algo_name}?view={view}")

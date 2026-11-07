@@ -1,4 +1,3 @@
-import os
 import csv
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
@@ -7,7 +6,6 @@ from pydantic import BaseModel
 from typing import Any, Optional
 import networkx as nx
 
-# Import des modules d'algorithmes locaux
 from app.algorithme import (
     bellman_ford,
     bfs,
@@ -107,49 +105,92 @@ def extract_params(request: RunRequest):
     return start, target, graph_data
 
 
+def execute_algorithm_logic(algo_name: str, request: RunRequest, view: str):
+    """
+    Mutualise la logique d'exécution des algorithmes pour /run et /run-network.
+    """
+    start, target, graph_data = extract_params(request)
+    G = load_networkx_graph_from_csv(view)
+
+    if start is not None and start not in G:
+        raise HTTPException(status_code=400, detail=f"Sommet de départ {start} introuvable ou en travaux.")
+    if target is not None and target not in G:
+        raise HTTPException(status_code=400, detail=f"Sommet d'arrivée {target} introuvable ou en travaux.")
+
+    nodes = list(G.nodes)
+    edges = [{"source": u, "v": v, "target": v, "weight": data["weight"]} for u, v, data in G.edges(data=True)]
+
+    prepared_graph = {
+        "nodes": nodes,
+        "edges": edges,
+        "start": start,
+        "target": target
+    }
+
+    if algo_name == "bellman_ford":
+        return bellman_ford.run(prepared_graph)
+    elif algo_name == "bfs":
+        return bfs.run(prepared_graph)
+    elif algo_name == "dfs":
+        return dfs.run(prepared_graph)
+    elif algo_name == "dijkstra":
+        return dijkstra.run(prepared_graph)
+    elif algo_name == "floyd_warshall":
+        return floyd_warshall.run(prepared_graph)
+    elif algo_name == "kruskal":
+        return kruskal.run(prepared_graph)
+    elif algo_name == "prim":
+        return prim.run(prepared_graph)
+    else:
+        raise HTTPException(status_code=404, detail=f"Algorithme {algo_name} inconnu.")
+
+
 @router.post("/run/{algo_name}")
 def run_algorithm_generic(algo_name: str, request: RunRequest, view: str = Query("routier")):
-    """
-    Exécute l'algorithme demandé en chargeant proprement les données source via NetworkX,
-    en filtrant les travaux et en respectant les sens uniques.
-    """
     try:
-        start, target, graph_data = extract_params(request)
-        G = load_networkx_graph_from_csv(view)
-
-        if start is not None and start not in G:
-            raise HTTPException(status_code=400, detail=f"Sommet de départ {start} introuvable ou en travaux.")
-        if target is not None and target not in G:
-            raise HTTPException(status_code=400, detail=f"Sommet d'arrivée {target} introuvable ou en travaux.")
-
-        nodes = list(G.nodes)
-        edges = [{"source": u, "v": v, "target": v, "weight": data["weight"]} for u, v, data in G.edges(data=True)]
-
-        prepared_graph = {
-            "nodes": nodes,
-            "edges": edges,
-            "start": start,
-            "target": target
-        }
-
-        if algo_name == "bellman_ford":
-            return bellman_ford.run(prepared_graph)
-        elif algo_name == "bfs":
-            return bfs.run(prepared_graph)
-        elif algo_name == "dfs":
-            return dfs.run(prepared_graph)
-        elif algo_name == "dijkstra":
-            return dijkstra.run(prepared_graph)
-        elif algo_name == "floyd_warshall":
-            return floyd_warshall.run(prepared_graph)
-        elif algo_name == "kruskal":
-            return kruskal.run(prepared_graph)
-        elif algo_name == "prim":
-            return prim.run(prepared_graph)
-        else:
-            raise HTTPException(status_code=404, detail=f"Algorithme {algo_name} inconnu.")
-
+        return execute_algorithm_logic(algo_name, request, view)
     except HTTPException as he:
         raise he
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/run-network/{algo_name}")
+def run_network_algorithm_generic(algo_name: str, request: RunRequest, view: str = Query("routier")):
+    """
+    Supporte l'endpoint /api/run-network/{algo_name} appelé par le front-end.
+    """
+    try:
+        return execute_algorithm_logic(algo_name, request, view)
+    except HTTPException as he:
+        raise he
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/analysis/report")
+def get_network_analysis_report(view: str = Query("routier")):
+    """
+    Génère le rapport complet des 5 indicateurs pour l'interface et le rapport.
+    """
+    try:
+        G_routier = load_networkx_graph_from_csv("routier")
+        G_fibre = load_networkx_graph_from_csv("fibre")
+
+        # Par défaut, on prend les 2 ou 3 premiers nœuds comme casernes de test (ou une liste fixe)
+        casernes = list(G_routier.nodes)[:2] if len(G_routier.nodes) >= 2 else list(G_routier.nodes)
+
+        from app.algorithme.analysis_service import analyser_indicateurs_reseau
+        resultats = analyser_indicateurs_reseau(G_routier, G_fibre, casernes)
+
+        return {
+            "status": "success",
+            "casernes_reference": casernes,
+            "nb_sites_accessibles": len(resultats["accessibilite_casernes"]),
+            "nb_composantes_fibre": len(resultats["composantes_fibre"]),
+            "cycles_orientes": resultats["cycles_orientes"],
+            "sites_isoles": resultats["sites_isoles"],
+            "sites_non_atteignables": resultats["sites_non_atteignables"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'analyse : {str(e)}")

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR, settings
-from app.routers import api, pages, download, algorithms
+from app.routers import api, pages, download, imports
 
 app = FastAPI(title=settings.app_title)
 
@@ -16,4 +16,5 @@ app.mount(
 app.include_router(pages.router)
 app.include_router(api.router)
 app.include_router(download.router)
-app.include_router(algorithms.router)
+
+app.include_router(imports.router)

@@ -19,7 +19,6 @@
     <!-- Barre de navigation supérieure -->
     <nav class="google-nav">
         <div class="nav-left">
-            <button class="menu-toggle-btn" onclick="toggleSidebar()" title="Réduire / Ouvrir le menu">☰</button>
             <a href="/" class="google-nav-brand">
                 <span style="color: #4285F4;">N</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">v</span><span style="color: #4285F4;">a</span><span style="color: #34A853;">p</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">l</span><span style="color: #4285F4;">i</span><span style="color: #34A853;">s</span>
             </a>
@@ -31,10 +30,30 @@
 
     <!-- Conteneur principal (Sidebar + Carte) -->
     <div class="app-container">
+
         <!-- Menu latéral rétractable -->
-        <aside id="sidebar" class="sidebar">
-            <!-- Contenu normal (quand le menu est ouvert) -->
+        <aside id="sidebar" class="sidebar collapsed">
+
+            <!-- Barre d'icônes fixe à gauche -->
+            <div class="sidebar-icon-nav">
+                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('algo')" title="Algorithmes">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+                </button>
+                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('export')" title="Export des Données">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('import')" title="Import de Fichiers">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </button>
+                <button class="icon-collapsed-btn" onclick="toggleSidebarTab('stats')" title="Statistiques">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </button>
+            </div>
+
+            <!-- Contenu dynamique du menu burger -->
             <div class="sidebar-content">
+
+                <!-- PERMANENT : Vues du Réseau -->
                 <div class="sidebar-section">
                     <h3>🗺️ Vues du Réseau</h3>
                     <div class="view-switch-col">
@@ -45,72 +64,106 @@
 
                 <hr class="sidebar-divider">
 
-                <div class="sidebar-section">
-                    <h3>🚀 Algorithmes</h3>
-                    <div class="algo-control-group">
-                        <select id="algo-select" class="sidebar-select" onchange="onAlgoChange()">
-                            <option value="dijkstra">Dijkstra (Plus court chemin)</option>
-                            <option value="bellman_ford">Bellman-Ford</option>
-                            <option value="bfs">BFS (Largeur)</option>
-                            <option value="dfs">DFS (Profondeur)</option>
-                            <option value="floyd_warshall">Floyd-Warshall</option>
-                            <option value="kruskal">Kruskal (MST)</option>
-                            <option value="prim">Prim (MST)</option>
-                        </select>
+                <!-- 1. Onglet Algorithmes -->
+                <div id="tab-algo" class="sidebar-tab-content" style="display: none;">
+                    <div class="sidebar-section">
+                        <h3>🚀 Algorithmes</h3>
+                        <div class="algo-control-group">
+                            <select id="algo-select" class="sidebar-select" onchange="onAlgoChange()">
+                                <option value="dijkstra">Dijkstra (Plus court chemin)</option>
+                                <option value="bellman_ford">Bellman-Ford</option>
+                                <option value="bfs">BFS (Largeur)</option>
+                                <option value="dfs">DFS (Profondeur)</option>
+                                <option value="floyd_warshall">Floyd-Warshall</option>
+                                <option value="kruskal">Kruskal (MST)</option>
+                                <option value="prim">Prim (MST)</option>
+                            </select>
 
-                        <!-- Statut de sélection sur la carte -->
-                        <div class="selection-status">
-                            <div>🚗 Départ : <span id="label-start">Aucun</span></div>
-                            <div id="target-container" style="margin-top: 4px;">🏁 Arrivée : <span id="label-target">Aucun</span></div>
+                            <div class="selection-status" style="margin-top: 10px;">
+                                <div>🚗 Départ : <span id="label-start">Aucun</span></div>
+                                <div id="target-container" style="margin-top: 4px;">🏁 Arrivée : <span id="label-target">Aucun</span></div>
+                            </div>
+
+                            <button class="sidebar-action-btn" onclick="runSelectedAlgorithm()" style="margin-top: 10px;">🚀 Lancer l'algorithme</button>
                         </div>
-
-                        <button class="sidebar-action-btn" onclick="runSelectedAlgorithm()">🚀 Lancer l'algorithme</button>
                     </div>
                 </div>
 
-                <hr class="sidebar-divider">
-
-                <!-- ==================== MENU BURGER : EXPORT & IMPORT ==================== -->
-                <div class="sidebar-section">
-                    <h3>📤 Export des Données</h3>
-                    <button onclick="downloadZipArchive()" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 8px;">
-                        📦 Télécharger le ZIP complet
-                    </button>
-                    <div style="display: flex; gap: 5px;">
-                        <button onclick="downloadSingle('sites.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Sites</button>
-                        <button onclick="downloadSingle('routes.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Routes</button>
-                        <button onclick="downloadSingle('fibre.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Fibre</button>
+                <!-- 2. Onglet Export -->
+                <div id="tab-export" class="sidebar-tab-content" style="display: none;">
+                    <div class="sidebar-section">
+                        <h3>📤 Export des Données</h3>
+                        <button onclick="downloadZipArchive()" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 8px;">
+                            📦 Télécharger le ZIP complet
+                        </button>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="downloadSingle('sites.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Sites</button>
+                            <button onclick="downloadSingle('routes.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Routes</button>
+                            <button onclick="downloadSingle('fibre.csv')" style="flex: 1; padding: 6px; background: #5f6368; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Fibre</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="sidebar-section" style="margin-top: 15px;">
-                    <h3>📥 Import de Fichiers</h3>
-                    <!-- Input fichier caché -->
-                    <input type="file" id="import-file-input" accept=".csv" style="display: none;" onchange="handleFileImport(event)">
-                    <button onclick="document.getElementById('import-file-input').click()" style="width: 100%; padding: 8px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                        📂 Importer un CSV
-                    </button>
-                    <span id="import-status" style="font-size: 11px; display: block; margin-top: 6px; color: #666; word-break: break-all;">Aucun fichier choisi</span>
-                </div>
+                <!-- 3. Onglet Import -->
+<div id="tab-import" class="sidebar-tab-content" style="display: none;">
+    <div class="sidebar-section">
+        <h3>📥 Import de Fichiers CSV</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Sélectionnez vos fichiers de données :</p>
 
-                <hr class="sidebar-divider">
-
-                <div class="sidebar-section">
-                    <h3>📊 Statistiques</h3>
-                    <div id="stats-info" style="font-size: 13px; color: #5f6368;">Chargement...</div>
-                </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+            <div>
+                <label>Sites :</label>
+                <input type="file" id="import-sites" accept=".csv" style="width: 100%; margin-top: 2px;">
             </div>
+            <div>
+                <label>Routes :</label>
+                <input type="file" id="import-routes" accept=".csv" style="width: 100%; margin-top: 2px;">
+            </div>
+            <div>
+                <label>Fibre :</label>
+                <input type="file" id="import-fibre" accept=".csv" style="width: 100%; margin-top: 2px;">
+            </div>
+        </div>
 
-            <!-- Icônes raccourcies (quand le menu est replié) -->
-            <div class="sidebar-icons-collapsed">
-                <button class="icon-collapsed-btn" onclick="toggleSidebar()" title="Vues / Imports">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                </button>
-                <button class="icon-collapsed-btn" onclick="toggleSidebar()" title="Algorithmes (Git Branch)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
-                </button>
+        <button onclick="submitMultiFileImport()" style="width: 100%; margin-top: 12px; padding: 8px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+            📂 Envoyer les fichiers au serveur
+        </button>
+
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #dee2e6;">
+
+        <!-- Section Import de Scénario Rapide -->
+        <h3>🎬 Scénarios Prédéfinis</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 8px;"> Charger un scénario de test :</p>
+        <button onclick="loadPresetScenario('standard')" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 6px;">
+            ⚡ Charger le Scénario Standard (120 sites)
+        </button>
+
+        <span id="import-status" style="font-size: 11px; display: block; margin-top: 6px; color: #666;"></span>
+    </div>
+</div>
+
+                <!-- 4. Onglet Statistiques -->
+                <div id="tab-stats" class="sidebar-tab-content" style="display: none;">
+                    <div class="sidebar-section">
+                        <h3>📊 Statistiques</h3>
+                        <div id="stats-info" style="font-size: 13px; color: #5f6368;">Chargement...</div>
+                    </div>
+                </div>
+
             </div>
         </aside>
+                <!-- Onglet Statistiques & Analyses Avancées -->
+<div id="tab-stats" class="sidebar-tab-content" style="display: none;">
+    <div class="sidebar-section">
+        <h3>📊 Analyses & Indicateurs (DFS/BFS)</h3>
+        <button onclick="fetchNetworkReport()" style="width: 100%; padding: 8px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-bottom: 10px;">
+            🔍 Lancer l'analyse du réseau
+        </button>
+        <div id="stats-info" style="font-size: 13px; color: #334043; line-height: 1.4;">
+            Cliquez sur le bouton pour afficher les rapports d'accessibilité, de cycles et de connexité.
+        </div>
+    </div>
+</div>
 
         <!-- Zone principale de la carte -->
         <main class="map-main-content">

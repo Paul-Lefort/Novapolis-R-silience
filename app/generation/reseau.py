@@ -26,6 +26,16 @@ def lire_sites(filepath):
     return sites
 
 
+def lire_sites_complets(filepath):
+    """Retourne {id: {"nom", "type", "lat", "lon"}}."""
+    sites = {}
+    with open(filepath, mode="r", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            sites[int(row["id"])] = {"nom": row["nom"], "type": row["type"],
+                                     "lat": float(row["latitude"]), "lon": float(row["longitude"])}
+    return sites
+
+
 def haversine_km(a, b):
     la1, lo1 = map(math.radians, a)
     la2, lo2 = map(math.radians, b)
@@ -76,12 +86,13 @@ class _GrilleAretes:
 
 
 # ---------- construction ----------
-def construire_graphe(sites, nombre_aretes=None, degre_max=3, jitter=0.0, k_voisins=10):
+def construire_graphe(sites, nombre_aretes=None, degre_max=3, jitter=0.0, k_voisins=10, rng=None):
     """Graphe non orienté planaire, connexe, degré <= degre_max.
 
     jitter : bruit sur les poids (0.3 = jusqu'à +30 %) pour que deux réseaux
              (routes / fibre) ne soient pas identiques tout en restant locaux.
     """
+    rng = rng or random.Random(0)  # graine explicite : résultat reproductible
     ids = list(sites)
     n = len(ids)
     lat0 = sum(la for la, _ in sites.values()) / n
@@ -103,7 +114,7 @@ def construire_graphe(sites, nombre_aretes=None, degre_max=3, jitter=0.0, k_vois
         )
         for v in proches:
             cand.add((min(u, v), max(u, v)))
-    poids = {e: math.dist(pts[e[0]], pts[e[1]]) * (1 + random.uniform(0, jitter)) for e in cand}
+    poids = {e: math.dist(pts[e[0]], pts[e[1]]) * (1 + rng.uniform(0, jitter)) for e in sorted(cand)}
     ordre = sorted(cand, key=poids.get)
 
     xs = [p[0] for p in pts.values()]
@@ -162,13 +173,39 @@ def construire_graphe(sites, nombre_aretes=None, degre_max=3, jitter=0.0, k_vois
     return G
 
 
-def orienter(G):
-    """Faiblement connexe, NON fortement connexe : un site « source » n'a que des arcs sortants."""
-    source = random.choice(list(G.nodes))
-    DG = nx.DiGraph()
-    DG.add_nodes_from(G.nodes)
-    for u, v in G.edges():
-        if v == source or (u != source and random.random() < 0.5):
-            u, v = v, u
-        DG.add_edge(u, v)
-    return DG
+def orienter_routes(G, rng, part_sens_unique=0.15, nb_impasses=2):
+    """Transforme le graphe non orienté G en réseau routier ORIENTÉ.
+
+    - par défaut chaque liaison est à double sens (arcs u->v ET v->u) ;
+    - `part_sens_unique` des liaisons passent à sens unique, MAIS seulement si le
+      « coeur » du réseau reste fortement connexe ;
+    - `nb_impasses` sites sont volontairement non atteignables (aucun arc entrant,
+      arcs sortants conservés) : cas limite documenté pour le diagnostic d'accessibilité.
+      Ils sont choisis hors points d'articulation pour ne pas couper le reste du réseau.
+
+    Retourne (DiGraph, ensemble des impasses).
+    """
+    DG = G.to_directed()
+    articulations = set(nx.articulation_points(G))
+    candidats = sorted(n for n in G.nodes if n not in articulations)
+    impasses = set(rng.sample(candidats, min(nb_impasses, len(candidats))))
+    for s_ in impasses:
+        for u in list(DG.predecessors(s_)):
+            DG.remove_edge(u, s_)
+    coeur = [n for n in G.nodes if n not in impasses]
+
+    aretes = sorted(tuple(sorted(e)) for e in G.edges())
+    rng.shuffle(aretes)
+    cible, faits = int(part_sens_unique * len(aretes)), 0
+    for u, v in aretes:
+        if faits >= cible:
+            break
+        if u in impasses or v in impasses:
+            continue
+        a, b = (u, v) if rng.random() < 0.5 else (v, u)  # on garde a -> b
+        DG.remove_edge(b, a)
+        if nx.is_strongly_connected(DG.subgraph(coeur)):
+            faits += 1
+        else:
+            DG.add_edge(b, a)
+    return DG, impasses

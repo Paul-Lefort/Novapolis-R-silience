@@ -1,1153 +1,271 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-
     <link rel="stylesheet" href="/static/css/style.css">
 
-    <!-- Leaflet -->
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- Leaflet CSS & JS (Remplace Vis.js) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-</head>
 
+    <style>
+        /* S'assurer que le container de carte prend toute la hauteur */
+        #network-container {
+            width: 100%;
+            height: calc(100vh - 110px);
+            background: #ffffff;
+        }
+        .leaflet-container { background: #ffffff; }
+        .arrow { background: none; border: none; }
+        .arrow div { font-size: 11px; line-height: 12px; text-align: center; text-shadow: 0 0 2px #fff, 0 0 2px #fff; pointer-events: none; }
+        .legend { background: rgba(255,255,255,.95); padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #3c4043; box-shadow: 0 1px 4px rgba(0,0,0,.25); line-height: 1.7; }
+        .legend i { display: inline-block; width: 22px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 8px; }
+    </style>
+</head>
 <body>
 
-    <!-- Barre de navigation -->
     <nav class="google-nav">
         <a href="/" class="google-nav-brand">
-            <span class="brand-blue">N</span><span class="brand-red">o</span><span class="brand-yellow">v</span><span class="brand-blue">a</span><span class="brand-green">p</span><span class="brand-red">o</span><span class="brand-yellow">l</span><span class="brand-blue">i</span><span class="brand-green">s</span>
+            <span style="color: #4285F4;">N</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">v</span><span style="color: #4285F4;">a</span><span style="color: #34A853;">p</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">l</span><span style="color: #4285F4;">i</span><span style="color: #34A853;">s</span>
         </a>
-
-        <button class="google-nav-btn" onclick="openModal()">
-            ⚙️ Générer un jeu de données
-        </button>
+        <button class="google-nav-btn" onclick="openModal()">⚙️ Générer un jeu de données</button>
     </nav>
 
-    <main class="main-content">
-
-        <!-- Chargement -->
+    <div class="main-content">
         <div id="loading-overlay">
             <div class="spinner"></div>
-            <div class="loading-text" id="loading-msg">
-                Chargement de la carte...
-            </div>
+            <div class="loading-text" id="loading-msg">Chargement de la carte...</div>
         </div>
 
-        <!-- Choix du réseau -->
-        <section class="graph-toolbar">
+        <div class="graph-toolbar">
             <div class="view-switch">
-                <button class="view-btn active"
-                        id="btn-routier"
-                        onclick="switchView('routier')">
-                    🛣️ Réseau routier
-                </button>
-
-                <button class="view-btn"
-                        id="btn-fibre"
-                        onclick="switchView('fibre')">
-                    🌐 Réseau fibre optique
-                </button>
+                <button class="view-btn active" id="btn-routier" onclick="switchView('routier')">🛣️ Réseau Routier</button>
+                <button class="view-btn" id="btn-fibre" onclick="switchView('fibre')">🌐 Réseau Fibre Optique</button>
+                <button class="view-btn" id="btn-both" onclick="switchView('both')">🗺️ Superposer</button>
             </div>
+            <div id="stats-info" style="font-size: 13px; color: #5f6368;">Chargement...</div>
+        </div>
 
-            <div id="stats-info">
-                Chargement...
-            </div>
-        </section>
+        <!-- Emplacement de la carte Leaflet -->
+        <div id="network-container"></div>
+    </div>
 
-        <!-- Panneau des algorithmes -->
-        <section id="algorithm-panel">
-
-            <div class="algorithm-heading">
-                <div>
-                    <h2>Exploration des algorithmes</h2>
-                    <p>
-                        Choisissez un algorithme pour observer son fonctionnement
-                        étape par étape sur le réseau sélectionné.
-                    </p>
-                </div>
-            </div>
-
-            <div class="algorithm-controls">
-
-                <div class="control-group">
-                    <label for="algorithm-select">Algorithme</label>
-                    <select id="algorithm-select">
-                        <option value="dfs">Parcours en profondeur (DFS)</option>
-                        <option value="bfs">Parcours en largeur (BFS)</option>
-                        <option value="dijkstra">Dijkstra</option>
-                        <option value="bellman_ford">Bellman-Ford</option>
-                        <option value="floyd_warshall">Floyd-Warshall</option>
-                        <option value="kruskal">Kruskal</option>
-                        <option value="prim">Prim</option>
-                    </select>
-                </div>
-
-                <div class="control-group">
-                    <label for="weight-select">Poids des arêtes</label>
-                    <select id="weight-select">
-                        <option value="distance_km">Distance (km)</option>
-                        <option value="temps_normal">Temps normal (min)</option>
-                        <option value="temps_pointe">Temps de pointe (min)</option>
-                    </select>
-                </div>
-
-                <div class="control-group" id="start-group">
-                    <label for="start-select">Sommet de départ</label>
-                    <select id="start-select">
-                        <option value="">Chargement des sommets...</option>
-                    </select>
-                </div>
-
-                <button id="run-algorithm" class="primary-btn"
-                        onclick="runAlgorithm()">
-                    ▶ Lancer l'algorithme
-                </button>
-            </div>
-
-            <div class="algorithm-notice" id="algorithm-notice">
-                Les algorithmes seront exécutés sur le réseau actuellement sélectionné.
-            </div>
-
-            <!-- Progression et explications -->
-            <div id="algorithm-progress" class="algorithm-progress hidden">
-
-                <div class="progress-header">
-                    <div>
-                        <span class="progress-label">Démonstration</span>
-                        <h3 id="step-title">Étape 0</h3>
-                    </div>
-
-                    <span id="step-counter">0 / 0</span>
-                </div>
-
-                <div class="progress-track">
-                    <div id="progress-bar"></div>
-                </div>
-
-                <div class="step-explanation">
-                    <p id="step-explanation">
-                        Les explications apparaîtront ici.
-                    </p>
-                </div>
-
-                <div class="step-details" id="step-details"></div>
-
-                <div class="step-buttons">
-                    <button id="previous-step"
-                            class="secondary-btn"
-                            onclick="previousStep()"
-                            disabled>
-                        ← Précédent
-                    </button>
-
-                    <button id="next-step"
-                            class="primary-btn"
-                            onclick="nextStep()"
-                            disabled>
-                        Suivant →
-                    </button>
-                </div>
-            </div>
-
-            <div id="algorithm-error" class="algorithm-error hidden"></div>
-
-        </section>
-
-        <!-- Carte -->
-        <section id="network-container"></section>
-
-    </main>
-
-    <!-- Fenêtre de génération -->
     <div class="modal-overlay" id="generate-modal">
         <div class="modal-card">
             <div class="modal-title">Générer un nouveau réseau</div>
-
             <div class="modal-input-group">
-                <label for="nombre-sites-input">
-                    Nombre de sites (ex : 100 à 1000) :
-                </label>
-
-                <input type="number"
-                       id="nombre-sites-input"
-                       value="120"
-                       min="10"
-                       max="2000">
+                <label for="nombre-sites-input">Nombre de sites (ex: 100 à 1000) :</label>
+                <input type="number" id="nombre-sites-input" value="120" min="10" max="2000">
             </div>
-
             <div class="modal-buttons">
-                <button class="modal-btn-cancel" onclick="closeModal()">
-                    Annuler
-                </button>
-
-                <button class="modal-btn-submit" onclick="submitGeneration()">
-                    Générer
-                </button>
+                <button class="modal-btn-cancel" onclick="closeModal()">Annuler</button>
+                <button class="modal-btn-submit" onclick="submitGeneration()">Générer</button>
             </div>
         </div>
     </div>
 
     <script>
-        /* =========================================================
-           1. VARIABLES GLOBALES
-        ========================================================= */
-
         let map = null;
-
-        let edgeLayer = null;
-        let arrowLayer = null;
-        let nodeLayer = null;
-        let algorithmLayer = null;
-        let legendEl = null;
-
-        let sitesData = [];
-        let routesData = [];
-        let fibreData = [];
-
+        let edgeLayer = null, arrowLayer = null, nodeLayer = null, legendEl = null;
+        let sitesData = [], routesData = [], fibreData = [];
         let arrowData = [];
         let currentView = 'routier';
 
-        let algorithmSteps = [];
-        let currentStepIndex = -1;
-        let selectedGraph = null;
-
-        let algorithmNodeMarkers = new Map();
-        let algorithmEdgeLines = new Map();
-
         const STYLES = {
-            routier: {
-                base: '#4285F4',
-                label: 'Route'
-            },
-            fibre: {
-                base: '#0b8043',
-                label: 'Fibre'
-            }
+            routier: { base: '#4285F4', label: 'Route' },
+            fibre:   { base: '#0b8043', label: 'Fibre' }
         };
 
-        const ALGORITHMS_WITH_START = [
-            'dfs',
-            'bfs',
-            'dijkstra',
-            'bellman_ford',
-            'prim'
-        ];
-
-        /* =========================================================
-           2. INITIALISATION DE LA CARTE
-        ========================================================= */
-
         function initMap() {
+            // Fond blanc : aucune tuile, on ne voit que le graphe
             map = L.map('network-container', {
-                preferCanvas: true,
-                attributionControl: false,
-                minZoom: 3,
-                maxZoom: 19,
-                zoomSnap: 0.25
+                preferCanvas: true, attributionControl: false,
+                minZoom: 3, maxZoom: 19, zoomSnap: 0.25
             }).setView([48.8566, 2.3522], 10);
 
+            // Ordre d'empilement : liaisons < flèches < sites
             edgeLayer = L.layerGroup().addTo(map);
             arrowLayer = L.layerGroup().addTo(map);
             nodeLayer = L.layerGroup().addTo(map);
-            algorithmLayer = L.layerGroup().addTo(map);
 
             map.on('zoomend', drawArrows);
 
-            const legend = L.control({
-                position: 'bottomleft'
-            });
-
-            legend.onAdd = () => {
-                legendEl = L.DomUtil.create('div', 'legend');
-                return legendEl;
-            };
-
+            const legend = L.control({ position: 'bottomleft' });
+            legend.onAdd = () => { legendEl = L.DomUtil.create('div', 'legend'); return legendEl; };
             legend.addTo(map);
         }
 
-        /* =========================================================
-           3. CHARGEMENT DES DONNÉES CSV
-        ========================================================= */
-
-        function setLoadingMessage(message, isError = false) {
-            const element = document.getElementById('loading-msg');
-
-            if (element) {
-                element.innerText = message;
-                element.style.color = isError ? '#d93025' : '';
-            }
+        function setLoadingMessage(msg, isError = false) {
+            const el = document.getElementById('loading-msg');
+            if (el) { el.innerText = msg; if (isError) el.style.color = '#d93025'; }
         }
 
-        async function loadCSV(url, message) {
-            setLoadingMessage(message);
+        function openModal() { document.getElementById('generate-modal').classList.add('active'); }
+        function closeModal() { document.getElementById('generate-modal').classList.remove('active'); }
 
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`Impossible de charger ${url}`);
+        async function submitGeneration() {
+            const nbSites = document.getElementById('nombre-sites-input').value;
+            closeModal();
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+            setLoadingMessage(`Génération de ${nbSites} sites...`);
+            try {
+                const response = await fetch(`/api/download/all?nombre_sites=${nbSites}`);
+                if (!response.ok) throw new Error("Erreur de génération");
+                setTimeout(loadNetworkData, 1000);
+            } catch (error) {
+                console.error("Erreur:", error);
+                setTimeout(() => { window.location.reload(); }, 1500);
             }
-
-            const csvText = await response.text();
-
-            return Papa.parse(csvText, {
-                header: true,
-                dynamicTyping: true,
-                skipEmptyLines: true
-            }).data;
         }
 
         async function loadNetworkData() {
             try {
-                sitesData = await loadCSV(
-                    '/api/sites',
-                    'Chargement des sites...'
-                );
+                const parse = async (url, msg) => {
+                    setLoadingMessage(msg);
+                    const res = await fetch(url);
+                    return Papa.parse(await res.text(), { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
+                };
+                sitesData = await parse('/api/sites', "Chargement des sites...");
+                routesData = await parse('/api/routes', "Chargement des routes...");
+                fibreData = await parse('/api/fibre', "Chargement de la fibre...");
 
-                routesData = await loadCSV(
-                    '/api/routes',
-                    'Chargement des routes...'
-                );
-
-                fibreData = await loadCSV(
-                    '/api/fibre',
-                    'Chargement de la fibre...'
-                );
-
-                document.getElementById('loading-overlay').style.display = 'none';
-
-                updateStartOptions();
-                updateAlgorithmControls();
+                const overlay = document.getElementById('loading-overlay');
+                if (overlay) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                }
                 renderGraph(currentView, true);
-
             } catch (error) {
-                console.error(error);
-                setLoadingMessage(
-                    'Erreur lors du chargement des fichiers CSV.',
-                    true
-                );
+                console.error("Erreur de chargement:", error);
+                setLoadingMessage("Erreur lors de la récupération des CSV.", true);
             }
         }
 
-        /* =========================================================
-           4. GÉNÉRATION DES DONNÉES
-        ========================================================= */
-
-        function openModal() {
-            document.getElementById('generate-modal')
-                .classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('generate-modal')
-                .classList.remove('active');
-        }
-
-        async function submitGeneration() {
-            const nbSites =
-                document.getElementById('nombre-sites-input').value;
-
-            if (!nbSites || Number(nbSites) < 10) {
-                alert('Veuillez saisir au moins 10 sites.');
-                return;
-            }
-
-            closeModal();
-
-            const overlay = document.getElementById('loading-overlay');
-            overlay.style.display = 'flex';
-            overlay.style.opacity = '1';
-
-            setLoadingMessage(`Génération de ${nbSites} sites...`);
-
-            try {
-                const response = await fetch(
-                    `/api/download/all?nombre_sites=${nbSites}`
-                );
-
-                if (!response.ok) {
-                    throw new Error('Erreur de génération des données.');
-                }
-
-                await loadNetworkData();
-
-            } catch (error) {
-                console.error(error);
-                setLoadingMessage(error.message, true);
-            }
-        }
-
-        /* =========================================================
-           5. AFFICHAGE DU GRAPHE
-        ========================================================= */
-
+        // Statut -> apparence d'une liaison
         function edgeStyle(kind, statut) {
-            let color = STYLES[kind].base;
-            let weight = 3;
-            let dash = null;
-            let opacity = 0.8;
-
+            let color = STYLES[kind].base, weight = 3, dash = null, opacity = 0.8;
             if (kind === 'routier') {
-                if (statut === 'saturé') {
-                    color = '#ea4335';
-                    weight = 4;
-                } else if (statut === 'travaux') {
-                    color = '#f9ab00';
-                    dash = '6, 6';
-                }
+                if (statut === 'saturé') { color = '#ea4335'; weight = 4; }
+                else if (statut === 'travaux') { color = '#f9ab00'; dash = '6, 6'; }
             } else {
                 weight = 2.5;
-
-                if (statut === 'en_maintenance') {
-                    color = '#f9ab00';
-                    dash = '6, 6';
-                } else if (statut === 'deploiement') {
-                    color = '#9aa0a6';
-                    dash = '2, 6';
-                }
+                if (statut === 'en_maintenance') { color = '#f9ab00'; dash = '6, 6'; }
+                else if (statut === 'deploiement') { color = '#9aa0a6'; dash = '2, 6'; }
             }
-
-            return {
-                color,
-                weight,
-                dashArray: dash,
-                opacity
-            };
+            return { color, weight, dashArray: dash, opacity };
         }
 
         function drawEdges(kind, rows, sitesMap) {
             let count = 0;
-
             rows.forEach(row => {
-                const posU = sitesMap.get(String(row.u));
-                const posV = sitesMap.get(String(row.v));
-
+                const posU = sitesMap.get(row.u), posV = sitesMap.get(row.v);
                 if (!posU || !posV) return;
-
                 count++;
 
                 const style = edgeStyle(kind, row.statut);
+                // En mode superposé, un léger décalage évite que route et fibre se masquent
                 const line = L.polyline([posU, posV], style);
 
-                const km = row.distance_km != null
-                    ? `${row.distance_km} km<br>`
-                    : '';
-
-                if (kind === 'routier') {
-                    line.bindPopup(
-                        `<b>Route ${row.u} → ${row.v}</b><br>
-                         ${km}
-                         Normal : ${row.temps_normal ?? '-'} min<br>
-                         Pointe : ${row.temps_pointe ?? '-'} min<br>
-                         Statut : ${row.statut ?? '-'}`
-                    );
-                } else {
-                    line.bindPopup(
-                        `<b>Fibre ${row.u} → ${row.v}</b><br>
-                         ${km}
-                         Coût : ${row.cost ?? '-'} €<br>
-                         Statut : ${row.statut ?? '-'}`
-                    );
-                }
-
-                line.on('mouseover', () => {
-                    line.setStyle({
-                        weight: style.weight + 2,
-                        opacity: 1
-                    });
-                });
-
-                line.on('mouseout', () => {
-                    line.setStyle(style);
-                });
-
+                const km = row.distance_km != null ? `${row.distance_km} km<br>` : '';
+                line.bindPopup(kind === 'routier'
+                    ? `<b>Route ${row.u} ➔ ${row.v}</b><br>${km}Normal : ${row.temps_normal} min<br>Pointe : ${row.temps_pointe} min<br>Statut : ${row.statut}`
+                    : `<b>Fibre ${row.u} ➔ ${row.v}</b><br>${km}Coût : ${row.cost} €<br>Statut : ${row.statut}`);
+                line.on('mouseover', () => line.setStyle({ weight: style.weight + 2, opacity: 1 }));
+                line.on('mouseout', () => line.setStyle(style));
                 edgeLayer.addLayer(line);
 
-                arrowData.push({
-                    from: posU,
-                    to: posV,
-                    color: style.color
-                });
+                arrowData.push({ from: posU, to: posV, color: style.color });
             });
-
             return count;
         }
 
+        // Flèche au milieu de chaque liaison (sens u -> v), seulement si lisible
         function drawArrows() {
             arrowLayer.clearLayers();
-
-            if (arrowData.length > 400 && map.getZoom() < 12) {
-                return;
-            }
-
-            arrowData.forEach(arrow => {
-                const p1 = map.project(arrow.from, 0);
-                const p2 = map.project(arrow.to, 0);
-
-                const angle = Math.atan2(
-                    p2.y - p1.y,
-                    p2.x - p1.x
-                ) * 180 / Math.PI;
-
-                const mid = [
-                    (arrow.from[0] + arrow.to[0]) / 2,
-                    (arrow.from[1] + arrow.to[1]) / 2
-                ];
-
-                arrowLayer.addLayer(
-                    L.marker(mid, {
-                        interactive: false,
-                        icon: L.divIcon({
-                            className: 'arrow',
-                            iconSize: [12, 12],
-                            iconAnchor: [6, 6],
-                            html: `<div style="transform:rotate(${angle}deg);color:${arrow.color}">▶</div>`
-                        })
+            if (arrowData.length > 400 && map.getZoom() < 12) return;
+            arrowData.forEach(a => {
+                const p1 = map.project(a.from, 0), p2 = map.project(a.to, 0);
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+                const mid = [(a.from[0] + a.to[0]) / 2, (a.from[1] + a.to[1]) / 2];
+                arrowLayer.addLayer(L.marker(mid, {
+                    interactive: false,
+                    icon: L.divIcon({
+                        className: 'arrow', iconSize: [12, 12], iconAnchor: [6, 6],
+                        html: `<div style="transform:rotate(${angle}deg);color:${a.color}">▶</div>`
                     })
-                );
+                }));
             });
         }
 
         function updateLegend(type) {
             if (!legendEl) return;
-
-            const item = (color, label, dashed = false) =>
-                `<div>
-                    <i style="border-color:${color};
-                    ${dashed ? 'border-top-style:dashed;' : ''}">
-                    </i>${label}
-                </div>`;
-
+            const item = (c, label, dash) =>
+                `<div><i style="border-color:${c};${dash ? 'border-top-style:dashed;' : ''}"></i>${label}</div>`;
             let html = '';
-
-            if (type === 'routier') {
-                html += item('#4285F4', 'Route ouverte');
-                html += item('#ea4335', 'Route saturée');
-                html += item('#f9ab00', 'Travaux', true);
-            } else {
-                html += item('#0b8043', 'Fibre active');
-                html += item('#9aa0a6', 'Fibre en déploiement', true);
-                html += item('#f9ab00', 'Maintenance', true);
-            }
-
-            legendEl.innerHTML = html;
+            if (type !== 'fibre') html += item('#4285F4', 'Route ouverte') + item('#ea4335', 'Route saturée') + item('#f9ab00', 'Travaux / maintenance', true);
+            if (type !== 'routier') html += item('#0b8043', 'Fibre active') + item('#9aa0a6', 'Fibre en déploiement', true);
+            legendEl.innerHTML = html + '<div style="color:#80868b">▶ sens de la liaison</div>';
         }
 
         function renderGraph(type, fit = false) {
             currentView = type;
-
             edgeLayer.clearLayers();
             nodeLayer.clearLayers();
-            arrowLayer.clearLayers();
-            algorithmLayer.clearLayers();
-
             arrowData = [];
 
             const sitesMap = new Map();
             const bounds = [];
-
             sitesData.forEach(site => {
                 const lat = site.latitude ?? site.lat;
                 const lon = site.longitude ?? site.lon ?? site.x;
-
                 if (lat == null || lon == null) return;
-
-                const id = String(site.id);
-
-                sitesMap.set(id, [lat, lon]);
+                sitesMap.set(site.id, [lat, lon]);
                 bounds.push([lat, lon]);
             });
 
+            // 1) liaisons d'abord (en dessous), 2) sites ensuite (au-dessus)
             let nbEdges = 0;
+            if (type !== 'fibre') nbEdges += drawEdges('routier', routesData, sitesMap);
+            if (type !== 'routier') nbEdges += drawEdges('fibre', fibreData, sitesMap);
 
-            if (type === 'routier') {
-                nbEdges = drawEdges(
-                    'routier',
-                    routesData,
-                    sitesMap
-                );
-            } else {
-                nbEdges = drawEdges(
-                    'fibre',
-                    fibreData,
-                    sitesMap
-                );
-            }
-
-            const nodeColor = STYLES[type].base;
-
+            const nodeColor = type === 'fibre' ? STYLES.fibre.base : STYLES.routier.base;
             sitesData.forEach(site => {
-                const pos = sitesMap.get(String(site.id));
-
+                const pos = sitesMap.get(site.id);
                 if (!pos) return;
-
                 L.circleMarker(pos, {
-                    radius: 5,
-                    fillColor: nodeColor,
-                    color: '#fff',
-                    weight: 1.5,
-                    fillOpacity: 1
-                })
-                .bindPopup(
-                    `<b>${site.nom || 'Site ' + site.id}</b><br>
-                     ${site.type || ''}<br>
-                     ID : ${site.id}`
-                )
-                .addTo(nodeLayer);
+                    radius: 5, fillColor: nodeColor, color: '#fff', weight: 1.5, fillOpacity: 1
+                }).bindPopup(`<b>${site.nom || 'Site ' + site.id}</b><br>${site.type || ''}<br>ID : ${site.id}`)
+                  .addTo(nodeLayer);
             });
 
             drawArrows();
             updateLegend(type);
 
-            if (fit && bounds.length > 0) {
-                map.fitBounds(bounds, {
-                    padding: [30, 30]
-                });
-            }
+            // On ne recadre que lors d'un (re)chargement : changer de vue garde le zoom de l'utilisateur
+            if (fit && bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] });
 
-            document.getElementById('stats-info').innerText =
-                `${sitesMap.size} sites & ${nbEdges} connexions`;
-
-            updateStartOptions();
-            resetAlgorithmDisplay();
+            const stats = document.getElementById('stats-info');
+            if (stats) stats.innerText = `${sitesMap.size} sites & ${nbEdges} connexions`;
         }
 
         function switchView(type) {
-            document.getElementById('btn-routier')
-                .classList.toggle('active', type === 'routier');
-
-            document.getElementById('btn-fibre')
-                .classList.toggle('active', type === 'fibre');
-
+            ['routier', 'fibre', 'both'].forEach(t => {
+                const btn = document.getElementById(t === 'both' ? 'btn-both' : 'btn-' + t);
+                if (btn) btn.classList.toggle('active', t === type);
+            });
             renderGraph(type);
-            updateAlgorithmControls();
         }
-
-        /* =========================================================
-           6. PARAMÈTRES DES ALGORITHMES
-        ========================================================= */
-
-        function updateAlgorithmControls() {
-            const weightSelect =
-                document.getElementById('weight-select');
-
-            const algorithm =
-                document.getElementById('algorithm-select').value;
-
-            const startGroup =
-                document.getElementById('start-group');
-
-            const notice =
-                document.getElementById('algorithm-notice');
-
-            if (currentView === 'routier') {
-                weightSelect.innerHTML = `
-                    <option value="distance_km">Distance (km)</option>
-                    <option value="temps_normal">Temps normal (min)</option>
-                    <option value="temps_pointe">Temps de pointe (min)</option>
-                `;
-            } else {
-                weightSelect.innerHTML = `
-                    <option value="cost">Coût (€)</option>
-                `;
-            }
-
-            startGroup.style.display =
-                ALGORITHMS_WITH_START.includes(algorithm)
-                    ? 'flex'
-                    : 'none';
-
-            if (algorithm === 'dfs' || algorithm === 'bfs') {
-                notice.innerText =
-                    'DFS et BFS utilisent les connexions du réseau. ' +
-                    'Les poids ne déterminent pas leur ordre de parcours.';
-            } else if (algorithm === 'dijkstra') {
-                notice.innerText =
-                    'Dijkstra nécessite des poids positifs ou nuls.';
-            } else if (algorithm === 'bellman_ford') {
-                notice.innerText =
-                    'Bellman-Ford permet de détecter les cycles de poids négatif.';
-            } else if (algorithm === 'floyd_warshall') {
-                notice.innerText =
-                    'Floyd-Warshall calcule les plus courts chemins entre toutes les paires de sommets.';
-            } else {
-                notice.innerText =
-                    'Cet algorithme recherche un arbre couvrant de poids minimal. ' +
-                    'Sur un graphe non connexe, le résultat sera une forêt.';
-            }
-        }
-
-        function updateStartOptions() {
-            const select = document.getElementById('start-select');
-            const previousValue = select.value;
-
-            select.innerHTML = '';
-
-            sitesData.forEach(site => {
-                const option = document.createElement('option');
-                option.value = String(site.id);
-                option.textContent =
-                    `${site.nom || 'Site'} (${site.id})`;
-
-                select.appendChild(option);
-            });
-
-            if (
-                previousValue &&
-                [...select.options].some(o => o.value === previousValue)
-            ) {
-                select.value = previousValue;
-            }
-        }
-
-        /* =========================================================
-           7. CONSTRUCTION DU GRAPHE POUR L'API
-        ========================================================= */
-
-        function buildSelectedGraph() {
-            const rows = currentView === 'routier'
-                ? routesData
-                : fibreData;
-
-            const weightField =
-                document.getElementById('weight-select').value;
-
-            const nodes = sitesData
-                .filter(site => site.id != null)
-                .map(site => String(site.id));
-
-            const nodeSet = new Set(nodes);
-
-            const edges = [];
-
-            rows.forEach((row, index) => {
-                const source = String(row.u);
-                const target = String(row.v);
-
-                if (!nodeSet.has(source) || !nodeSet.has(target)) {
-                    return;
-                }
-
-                const weight = Number(row[weightField]);
-
-                if (!Number.isFinite(weight)) {
-                    return;
-                }
-
-                edges.push({
-                    id: `${source}-${target}-${index}`,
-                    source,
-                    target,
-                    weight
-                });
-            });
-
-            if (nodes.length === 0) {
-                throw new Error('Le graphe ne contient aucun sommet.');
-            }
-
-            if (edges.length === 0) {
-                throw new Error('Le graphe ne contient aucune arête valide pour ce poids.');
-            }
-
-            const algorithm =
-                document.getElementById('algorithm-select').value;
-
-            const graph = {
-                directed: false,
-                nodes,
-                edges
-            };
-
-            if (ALGORITHMS_WITH_START.includes(algorithm)) {
-                const start =
-                    document.getElementById('start-select').value;
-
-                if (!start) {
-                    throw new Error('Veuillez choisir un sommet de départ.');
-                }
-
-                graph.start = start;
-            }
-
-            return graph;
-        }
-
-        /* =========================================================
-           8. EXÉCUTION DE L'ALGORITHME
-        ========================================================= */
-
-        async function runAlgorithm() {
-            const runButton =
-                document.getElementById('run-algorithm');
-
-            const errorBox =
-                document.getElementById('algorithm-error');
-
-            errorBox.classList.add('hidden');
-            runButton.disabled = true;
-            runButton.innerText = 'Calcul en cours...';
-
-            try {
-                const algorithm =
-                    document.getElementById('algorithm-select').value;
-
-                selectedGraph = buildSelectedGraph();
-
-                const response = await fetch(
-                    `/api/algorithms/${algorithm}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            graph: selectedGraph
-                        })
-                    }
-                );
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(
-                        data.detail || 'Erreur pendant le calcul.'
-                    );
-                }
-
-                if (!Array.isArray(data.steps)) {
-                    throw new Error(
-                        'Le service ne retourne pas de liste d’étapes.'
-                    );
-                }
-
-                algorithmSteps = data.steps;
-                currentStepIndex = 0;
-
-                document.getElementById('algorithm-progress')
-                    .classList.remove('hidden');
-
-                if (algorithmSteps.length === 0) {
-                    throw new Error('Aucune étape à afficher.');
-                }
-
-                showAlgorithmStep(0);
-
-            } catch (error) {
-                console.error(error);
-                errorBox.innerText = error.message;
-                errorBox.classList.remove('hidden');
-
-                document.getElementById('algorithm-progress')
-                    .classList.add('hidden');
-
-            } finally {
-                runButton.disabled = false;
-                runButton.innerText = '▶ Relancer l’algorithme';
-            }
-        }
-
-        /* =========================================================
-           9. AFFICHAGE DES ÉTAPES
-        ========================================================= */
-
-        function getStepValue(step, keys, fallback = []) {
-            for (const key of keys) {
-                if (step[key] !== undefined && step[key] !== null) {
-                    return step[key];
-                }
-            }
-
-            return fallback;
-        }
-
-        function showAlgorithmStep(index) {
-            if (
-                index < 0 ||
-                index >= algorithmSteps.length
-            ) {
-                return;
-            }
-
-            currentStepIndex = index;
-
-            const step = algorithmSteps[index];
-
-            const title =
-                step.title || step.type || `Étape ${index + 1}`;
-
-            const explanation =
-                step.explanation ||
-                step.description ||
-                'Aucune explication disponible pour cette étape.';
-
-            document.getElementById('step-title').innerText = title;
-            document.getElementById('step-explanation').innerText =
-                explanation;
-
-            document.getElementById('step-counter').innerText =
-                `${index + 1} / ${algorithmSteps.length}`;
-
-            const progress =
-                ((index + 1) / algorithmSteps.length) * 100;
-
-            document.getElementById('progress-bar')
-                .style.width = `${progress}%`;
-
-            document.getElementById('previous-step').disabled =
-                index === 0;
-
-            document.getElementById('next-step').disabled =
-                index === algorithmSteps.length - 1;
-
-            displayStepDetails(step);
-            drawAlgorithmStep(step);
-        }
-
-        function displayStepDetails(step) {
-            const details =
-                document.getElementById('step-details');
-
-            details.innerHTML = '';
-
-            const values = [
-                ['Sommet courant', step.current_node],
-                ['Sommet candidat', step.candidate_node],
-                ['Distance', step.distance],
-                ['Poids', step.weight],
-                ['Ancienne valeur', step.old_distance],
-                ['Nouvelle valeur', step.new_distance]
-            ];
-
-            values.forEach(([label, value]) => {
-                if (value === undefined || value === null) return;
-
-                const item = document.createElement('div');
-                item.className = 'detail-item';
-
-                const name = document.createElement('span');
-                name.className = 'detail-label';
-                name.innerText = label;
-
-                const content = document.createElement('strong');
-                content.innerText = String(value);
-
-                item.appendChild(name);
-                item.appendChild(content);
-                details.appendChild(item);
-            });
-        }
-
-        function nextStep() {
-            if (currentStepIndex < algorithmSteps.length - 1) {
-                showAlgorithmStep(currentStepIndex + 1);
-            }
-        }
-
-        function previousStep() {
-            if (currentStepIndex > 0) {
-                showAlgorithmStep(currentStepIndex - 1);
-            }
-        }
-
-        /* =========================================================
-           10. VISUALISATION DES ÉTAPES SUR LA CARTE
-        ========================================================= */
-
-        function drawAlgorithmStep(step) {
-            algorithmLayer.clearLayers();
-
-            const visited = getStepValue(step, [
-                'visited',
-                'visited_nodes',
-                'settled',
-                'settled_nodes'
-            ]);
-
-            const selectedEdges = getStepValue(step, [
-                'selected_edges',
-                'tree_edges',
-                'mst_edges'
-            ]);
-
-            const exploredEdges = getStepValue(step, [
-                'explored_edges',
-                'considered_edges'
-            ]);
-
-            const currentNode = step.current_node;
-            const candidateNode = step.candidate_node;
-
-            const visitedSet = new Set(
-                Array.isArray(visited)
-                    ? visited.map(String)
-                    : []
-            );
-
-            const selectedSet = new Set(
-                Array.isArray(selectedEdges)
-                    ? selectedEdges.map(edgeKey)
-                    : []
-            );
-
-            const exploredSet = new Set(
-                Array.isArray(exploredEdges)
-                    ? exploredEdges.map(edgeKey)
-                    : []
-            );
-
-            const positions = new Map();
-
-            sitesData.forEach(site => {
-                const lat = site.latitude ?? site.lat;
-                const lon = site.longitude ?? site.lon ?? site.x;
-
-                if (lat != null && lon != null) {
-                    positions.set(String(site.id), [lat, lon]);
-                }
-            });
-
-            // Sommets
-            positions.forEach((position, id) => {
-                let color = '#4285F4';
-                let radius = 6;
-
-                if (visitedSet.has(id)) {
-                    color = '#34A853';
-                    radius = 7;
-                }
-
-                if (String(candidateNode) === id) {
-                    color = '#FBBC05';
-                    radius = 9;
-                }
-
-                if (String(currentNode) === id) {
-                    color = '#EA4335';
-                    radius = 10;
-                }
-
-                L.circleMarker(position, {
-                    radius,
-                    color: '#ffffff',
-                    weight: 2,
-                    fillColor: color,
-                    fillOpacity: 1
-                })
-                .bindPopup(`Sommet ${id}`)
-                .addTo(algorithmLayer);
-            });
-
-            // Arêtes du graphe sélectionnées ou explorées
-            const rows = currentView === 'routier'
-                ? routesData
-                : fibreData;
-
-            rows.forEach(row => {
-                const u = String(row.u);
-                const v = String(row.v);
-
-                const posU = positions.get(u);
-                const posV = positions.get(v);
-
-                if (!posU || !posV) return;
-
-                const key = `${u}-${v}`;
-                const reverseKey = `${v}-${u}`;
-
-                let color = null;
-                let weight = 3;
-
-                if (
-                    selectedSet.has(key) ||
-                    selectedSet.has(reverseKey)
-                ) {
-                    color = '#34A853';
-                    weight = 6;
-                } else if (
-                    exploredSet.has(key) ||
-                    exploredSet.has(reverseKey)
-                ) {
-                    color = '#FBBC05';
-                    weight = 4;
-                }
-
-                if (!color) return;
-
-                L.polyline([posU, posV], {
-                    color,
-                    weight,
-                    opacity: 0.95
-                }).addTo(algorithmLayer);
-            });
-        }
-
-        function edgeKey(edge) {
-            if (typeof edge === 'string') {
-                return edge;
-            }
-
-            if (Array.isArray(edge)) {
-                return `${edge[0]}-${edge[1]}`;
-            }
-
-            if (edge && edge.source !== undefined) {
-                return `${edge.source}-${edge.target}`;
-            }
-
-            if (edge && edge.u !== undefined) {
-                return `${edge.u}-${edge.v}`;
-            }
-
-            return '';
-        }
-
-        function resetAlgorithmDisplay() {
-            algorithmSteps = [];
-            currentStepIndex = -1;
-
-            if (algorithmLayer) {
-                algorithmLayer.clearLayers();
-            }
-
-            document.getElementById('algorithm-progress')
-                .classList.add('hidden');
-
-            document.getElementById('algorithm-error')
-                .classList.add('hidden');
-
-            document.getElementById('run-algorithm').innerText =
-                '▶ Lancer l’algorithme';
-        }
-
-        /* =========================================================
-           11. ÉVÉNEMENTS
-        ========================================================= */
-
-        document.getElementById('algorithm-select')
-            .addEventListener('change', () => {
-                updateAlgorithmControls();
-                resetAlgorithmDisplay();
-            });
-
-        document.getElementById('weight-select')
-            .addEventListener('change', resetAlgorithmDisplay);
-
-        document.getElementById('start-select')
-            .addEventListener('change', resetAlgorithmDisplay);
 
         window.addEventListener('DOMContentLoaded', () => {
             initMap();
             loadNetworkData();
-            updateAlgorithmControls();
         });
     </script>
-
 </body>
 </html>

@@ -1,0 +1,28 @@
+{# Menu « intervention » (icône de la sidebar) #}
+<section id="tab-intervention" class="sidebar-tab-content" hidden>
+    <div class="sidebar-section">
+        <h3>Calcul d'Intervention</h3>
+        <p class="hint">Choisissez la caserne de départ dans la liste et cliquez sur la carte pour définir le site d'intervention.</p>
+
+        <div class="panel">
+            <div class="panel-title">Sommets de l'intervention</div>
+            <label class="field-label" for="inter-start-select">Caserne de départ :</label>
+            <select id="inter-start-select" class="sidebar-select" data-change="caserne-changed">
+                <option value="">Chargement des casernes...</option>
+            </select>
+            <div class="text-sm mt-sm">Site cible (clic carte) : <span id="inter-target" class="target-value">Aucun</span></div>
+        </div>
+
+        <div class="field-group">
+            <div class="panel-title">Scénario de perturbation</div>
+            <label class="field-label" for="inter-scenario-file">Importer scenarios.csv :</label>
+            <input type="file" id="inter-scenario-file" accept=".csv" class="file-input">
+
+            <label class="field-label" for="inter-manual-arcs">Ou saisir des arcs à fermer (u->v) :</label>
+            <input type="text" id="inter-manual-arcs" class="sidebar-input" placeholder="Ex: 3->16, 8->10">
+        </div>
+
+        <button class="btn btn-lg btn-block btn-red" data-action="run-intervention">Calculer le trajet d'intervention</button>
+        <div id="intervention-results" class="results"></div>
+    </div>
+</section>

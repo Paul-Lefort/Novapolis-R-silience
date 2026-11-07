@@ -2,62 +2,70 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }}</title>
 
-    <!-- CSS Personnalisé -->
     <link rel="stylesheet" href="/static/css/style.css">
 
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-</head>
-<body>
 
+    <!-- Application (modules ES, exécutés après le parsing du DOM) -->
+    <script type="module" src="/static/js/main.js"></script>
+</head>
+<body class="app-layout">
+
+    <!-- Barre de navigation supérieure -->
     <nav class="google-nav">
-        <a href="/" class="google-nav-brand">
-            <span style="color: #4285F4;">N</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">v</span><span style="color: #4285F4;">a</span><span style="color: #34A853;">p</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">l</span><span style="color: #4285F4;">i</span><span style="color: #34A853;">s</span>
-        </a>
-        <button class="google-nav-btn" onclick="openModal()">⚙️ Générer un jeu de données</button>
+        <a href="/" class="google-nav-brand"><span class="c-blue">N</span><span class="c-red">o</span><span class="c-yellow">v</span><span class="c-blue">a</span><span class="c-green">p</span><span class="c-red">o</span><span class="c-yellow">l</span><span class="c-blue">i</span><span class="c-green">s</span></a>
+        <button class="google-nav-btn" data-action="open-modal">Générer un jeu de données</button>
     </nav>
 
-    <div class="main-content">
-        <div id="loading-overlay">
-            <div class="spinner"></div>
-            <div class="loading-text" id="loading-msg">Chargement de la carte...</div>
-        </div>
+    <div class="app-container">
 
-        <div class="graph-toolbar">
-            <div class="view-switch">
-                <button class="view-btn active" id="btn-routier" onclick="switchView('routier')">🛣️ Réseau Routier</button>
-                <button class="view-btn" id="btn-fibre" onclick="switchView('fibre')">🌐 Réseau Fibre Optique</button>
-                <button class="view-btn" id="btn-both" onclick="switchView('both')">🗺️ Superposer</button>
+        <!-- Menu latéral rétractable -->
+        <aside id="sidebar" class="sidebar collapsed">
+
+            {% include "partials/sidebar_icons.html" %}
+
+            <div class="sidebar-content">
+
+                <!-- Vues du réseau (toujours visibles) -->
+                {% include "partials/network_views.html" %}
+
+                <hr class="sidebar-divider">
+
+                {% include "partials/tab_algo.html" %}
+
+                {% include "partials/tab_intervention.html" %}
+
+                {% include "partials/tab_fibre.html" %}
+
+                {% include "partials/tab_export.html" %}
+
+                {% include "partials/tab_import.html" %}
+
+                {% include "partials/tab_stats.html" %}
+
+                {% include "partials/tab_negative_cycles.html" %}
+
+                {% include "partials/tab_benchmark.html" %}
+
             </div>
-            <div id="stats-info" style="font-size: 13px; color: #5f6368;">Chargement...</div>
-        </div>
+        </aside>
 
-        <!-- Emplacement de la carte Leaflet -->
-        <div id="network-container"></div>
+        <!-- Carte -->
+        <main class="map-main-content">
+            {% include "partials/loading_overlay.html" %}
+            <div id="network-container"></div>
+        </main>
     </div>
 
-    <div class="modal-overlay" id="generate-modal">
-        <div class="modal-card">
-            <div class="modal-title">Générer un nouveau réseau</div>
-            <div class="modal-input-group">
-                <label for="nombre-sites-input">Nombre de sites (ex: 100 à 1000) :</label>
-                <input type="number" id="nombre-sites-input" value="120" min="10" max="2000">
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-btn-cancel" onclick="closeModal()">Annuler</button>
-                <button class="modal-btn-submit" onclick="submitGeneration()">Générer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Script principal JS -->
-    <script src="/static/js/graphRender.js"></script>
-    <script src="/static/js/api.js"></script>
-    <script src="/static/js/main.js"></script></body>
+    <!-- Modale de génération -->
+    {% include "partials/modal_generate.html" %}
+</body>
 </html>

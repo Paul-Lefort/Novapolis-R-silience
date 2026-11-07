@@ -1,0 +1,30 @@
+{# Menu « fibre » (icône de la sidebar) #}
+<section id="tab-fibre" class="sidebar-tab-content" hidden>
+    <div class="sidebar-section">
+        <h3>Conception Réseau Fibre (ACM)</h3>
+        <p class="hint">Calcul de l'Arbre Couvrant Minimal (Kruskal &amp; Prim) et étude de résilience aux pannes de tronçons.</p>
+
+        <div class="stack">
+            <label class="field-label" for="acm-algo-select">Algorithme d'optimisation :</label>
+            <select id="acm-algo-select" class="sidebar-select">
+                <option value="kruskal">Kruskal (Union-Find)</option>
+                <option value="prim">Prim (File de priorité)</option>
+            </select>
+            <button class="btn btn-block btn-green" data-action="run-acm">Calculer l'Arbre Couvrant Minimal</button>
+            <button class="btn btn-block btn-sm btn-gray" data-action="compare-acm">Comparer Kruskal vs Prim</button>
+        </div>
+
+        <hr class="divider spaced">
+
+        <div class="stack">
+            <label class="field-label">Simulation de panne sur le tronçon :</label>
+            <div class="btn-row">
+                <input type="text" id="panne-u" class="sidebar-input" placeholder="Sommet U" aria-label="Sommet U">
+                <input type="text" id="panne-v" class="sidebar-input" placeholder="Sommet V" aria-label="Sommet V">
+            </div>
+            <button class="btn btn-block btn-red" data-action="simulate-breakdown">Analyser l'impact de la panne</button>
+        </div>
+
+        <div id="fibre-acm-results" class="results"></div>
+    </div>
+</section>

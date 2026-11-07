@@ -5,7 +5,7 @@ import { CASERNE_COLOR, MAP_DEFAULTS, NODE_COLORS } from '../config.js';
 import { $, escapeHtml } from '../utils.js';
 
 const ARROW_COLOR = '#ff5722';
-const ARROW_HIDE_THRESHOLD = 400; // au-delà, on masque les flèches en dézoomant
+const ARROW_HIDE_THRESHOLD = 400;
 const HOUSE_SVG = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z"/></svg>';
 
 let legendEl = null;
@@ -66,7 +66,48 @@ const TOOLTIPS = {
         `Coût : ${escapeHtml(r.cost)} k€<br>Statut : ${escapeHtml(r.statut)}`,
 };
 
-// ---------- Index des positions ----------
+// ---------- Mathématiques pour l'évitement des lignes ----------
+
+export function getCurvedPath(posU, posV, curvature) {
+    const lat1 = posU[0], lon1 = posU[1];
+    const lat2 = posV[0], lon2 = posV[1];
+    const dLat = lat2 - lat1, dLon = lon2 - lon1;
+    const ctrlLat = (lat1 + lat2) / 2 - dLon * curvature;
+    const ctrlLon = (lon1 + lon2) / 2 + dLat * curvature;
+
+    const points = [];
+    for (let t = 0; t <= 1.01; t += 0.05) {
+        points.push([
+            (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * ctrlLat + t * t * lat2,
+            (1 - t) * (1 - t) * lon1 + 2 * (1 - t) * t * ctrlLon + t * t * lon2
+        ]);
+    }
+    return points;
+}
+
+// Vérifie si un sommet X se trouve parfaitement aligné entre A et B
+function hasIntermediateNode(from, to, allPositions) {
+    const [lat1, lon1] = from;
+    const [lat2, lon2] = to;
+    const lengthSq = (lat2 - lat1)**2 + (lon2 - lon1)**2;
+    if (lengthSq === 0) return false;
+
+    const tol = 1e-8; // Tolérance géométrique (env. 10 mètres)
+
+    for (const pos of allPositions) {
+        if (pos === from || pos === to) continue;
+        const [pLat, pLon] = pos;
+
+        // Projection du point sur l'axe AB
+        const dot = (pLat - lat1) * (lat2 - lat1) + (pLon - lon1) * (lon2 - lon1);
+        if (dot > 0 && dot < lengthSq) {
+            // Distance perpendiculaire à la ligne
+            const cross = (lat2 - lat1) * (pLon - lon1) - (pLat - lat1) * (lon2 - lon1);
+            if ((cross * cross) / lengthSq < tol) return true;
+        }
+    }
+    return false;
+}
 
 function buildPositions() {
     state.positions = new Map();
@@ -83,28 +124,58 @@ function buildPositions() {
 
 // ---------- Arcs ----------
 
-/** Dessine les arcs d'un type ; renvoie le nombre d'arcs effectivement tracés. */
 function drawEdges(rows, kind) {
     const directed = kind === 'routier';
     const existing = directed ? new Set(rows.map((r) => `${r.u}_${r.v}`)) : null;
+
+    // Pour vérifier les superpositions avec l'autre couche
+    const otherRows = kind === 'routier' ? state.fibre : state.routes;
+    const otherSet = new Set(otherRows.map(r => {
+        const a = String(r.u), b = String(r.v);
+        return a < b ? `${a}_${b}` : `${b}_${a}`;
+    }));
+
+    const allPositions = Array.from(state.positions.values());
     let count = 0;
 
     for (const row of rows) {
         const from = state.positions.get(String(row.u));
         const to = state.positions.get(String(row.v));
         if (!from || !to) continue;
+        if (from[0] === to[0] && from[1] === to[1]) continue; // Ignore les boucles A -> A
+
         count++;
 
+        const uStr = String(row.u), vStr = String(row.v);
+        const isBidir = directed && existing.has(`${vStr}_${uStr}`);
+        const sig = uStr < vStr ? `${uStr}_${vStr}` : `${vStr}_${uStr}`;
+        const hasOtherKind = otherSet.has(sig);
+        const hasInter = hasIntermediateNode(from, to, allPositions);
+
+        // Ligne droite par défaut (0), on ne courbe que s'il y a conflit visuel sur le même axe
+        let curvature = 0;
+        if (isBidir || hasOtherKind || hasInter) {
+            const dirSign = uStr < vStr ? 1 : -1;
+            const kindSign = kind === 'fibre' ? -1 : 1;
+            curvature = 0.15 * dirSign * kindSign;
+            if (isBidir && hasOtherKind) curvature *= 1.5; // Accentuation si grosse densité
+        }
+
+        // Sauvegarde de la courbure pour le surlignage vert du chemin (highlights.js)
+        state.edgeCurvatures.set(`${kind}_${uStr}_${vStr}`, curvature);
+        if (!directed) state.edgeCurvatures.set(`${kind}_${vStr}_${uStr}`, -curvature);
+
         const style = edgeStyle(kind, row.statut);
-        const line = L.polyline([from, to], style)
+        const pathCoords = curvature === 0 ? [from, to] : getCurvedPath(from, to, curvature);
+
+        const line = L.polyline(pathCoords, style)
             .bindTooltip(TOOLTIPS[kind](row), { direction: 'top', sticky: true });
         line.on('mouseover', () => line.setStyle({ weight: style.weight + 2, opacity: 1 }));
         line.on('mouseout', () => line.setStyle(style));
         state.layers.edges.addLayer(line);
 
-        // Flèche uniquement si l'arc n'a pas de sens inverse
-        if (directed && !existing.has(`${row.v}_${row.u}`)) {
-            state.arrows.push({ from, to });
+        if (directed) {
+            state.arrows.push({ from, to, curvature });
         }
     }
     return count;
@@ -117,11 +188,20 @@ function drawArrows() {
     if (arrows.length > ARROW_HIDE_THRESHOLD && map.getZoom() < 12) return;
 
     const zoom = map.getZoom();
-    for (const { from, to } of arrows) {
+    for (const { from, to, curvature } of arrows) {
+        const lat1 = from[0], lon1 = from[1];
+        const lat2 = to[0], lon2 = to[1];
+
+        // Calcul du milieu exact, même sur une courbe
+        const ctrlLat = (lat1 + lat2) / 2 - (lon2 - lon1) * curvature;
+        const ctrlLon = (lon1 + lon2) / 2 + (lat2 - lat1) * curvature;
+        const arrLat = 0.25 * lat1 + 0.5 * ctrlLat + 0.25 * lat2;
+        const arrLon = 0.25 * lon1 + 0.5 * ctrlLon + 0.25 * lon2;
+
         const p1 = map.project(from, zoom), p2 = map.project(to, zoom);
         const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
 
-        layers.arrows.addLayer(L.marker([(from[0] + to[0]) / 2, (from[1] + to[1]) / 2], {
+        layers.arrows.addLayer(L.marker([arrLat, arrLon], {
             interactive: false,
             icon: L.divIcon({
                 className: 'arrow-icon',
@@ -169,6 +249,7 @@ export function renderGraph(view, { fit = false } = {}) {
     legendUnreachable = false;
     state.arrows = [];
     state.markers = new Map();
+    state.edgeCurvatures = new Map(); // Stockage des courbures pour les itinéraires
 
     const bounds = buildPositions();
 
@@ -193,7 +274,7 @@ export function renderGraph(view, { fit = false } = {}) {
             .on('click', () => onNodeClick(site.id))
             .addTo(layers.nodes);
 
-        marker.baseStyle = baseStyle; // style de repos, restauré après sélection
+        marker.baseStyle = baseStyle;
         state.markers.set(String(site.id), marker);
 
         if (isCaserne) {

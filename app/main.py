@@ -1,9 +1,10 @@
+from xxsubtype import bench
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR, settings
-from app.routers import api, pages, download, imports, analysis, fibre
+from app.routers import api, pages, download, imports, analysis, fibre, negative_cycles, benchmark
 
 app = FastAPI(title=settings.app_title)
 
@@ -16,8 +17,8 @@ app.mount(
 app.include_router(pages.router)
 app.include_router(api.router)
 app.include_router(download.router)
-
 app.include_router(imports.router)
-
 app.include_router(analysis.router)
 app.include_router(fibre.router)
+app.include_router(negative_cycles.router)
+app.include_router(benchmark.router)

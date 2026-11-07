@@ -174,7 +174,8 @@ function drawEdges(rows, kind) {
         line.on('mouseout', () => line.setStyle(style));
         state.layers.edges.addLayer(line);
 
-        if (directed) {
+        // On n'ajoute la flèche que si le réseau est orienté ET que l'arc n'est pas bidirectionnel
+        if (directed && !isBidir) {
             state.arrows.push({ from, to, curvature });
         }
     }

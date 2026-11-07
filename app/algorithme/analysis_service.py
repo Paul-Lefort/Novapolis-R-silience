@@ -12,7 +12,8 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
 def analyser_indicateurs_reseau(view: str = "routier"):
     """
-    Exécute les 5 indicateurs d'analyse globale du réseau.
+    Exécute les 5 indicateurs d'analyse globale du réseau en partant de tous
+    les sommets et en soustrayant au fur et à mesure les sites atteints par chaque caserne.
     """
     print("[DEBUG_ANALYSIS] Début de l'analyse globale du réseau...")
 
@@ -31,29 +32,44 @@ def analyser_indicateurs_reseau(view: str = "routier"):
             "sites_non_atteignables": []
         }
 
-    casernes = [
-        n for n, d in G_routier.nodes(data=True)
-        if str(d.get('type', '')).lower() == 'caserne'
-    ]
-    if not casernes:
+    # 1. Identification robuste et sécurisée de TOUTES les casernes
+    found_casernes = []
+    for n, d in G_routier.nodes(data=True):
+        site_type = str(d.get('type', '')).lower()
+        if 'caserne' in site_type:
+            found_casernes.append(n)
+
+    if not found_casernes:
         nodes_list = list(G_routier.nodes)
-        casernes = nodes_list[:2] if len(nodes_list) >= 2 else nodes_list
+        found_casernes = nodes_list[:2] if len(nodes_list) >= 2 else nodes_list
 
-    sites_accessibles = set()
+    casernes = found_casernes
+    print(f"[DEBUG_ANALYSIS] Casernes détectées : {len(casernes)} (IDs : {casernes})")
+
+    # 2. Approche par soustraction (via le graphe non orienté pour éviter les blocages de sens uniques)
+    G_non_oriente = G_routier.to_undirected()
+    sites_non_atteignables = set(G_routier.nodes)
+
     for caserne in casernes:
-        if caserne in G_routier:
-            accessibles = nx.descendants(G_routier, caserne)
-            accessibles.add(caserne)
-            sites_accessibles.update(accessibles)
+        if caserne in G_non_oriente:
+            try:
+                accessibles = set(nx.node_connected_component(G_non_oriente, caserne))
+            except Exception:
+                accessibles = set(nx.single_source_shortest_path_length(G_non_oriente, caserne).keys())
 
-    composantes_fibre = list(nx.connected_components(G_fibre)) if len(G_fibre.nodes) > 0 else []
-    cycles_detectes = not nx.is_directed_acyclic_graph(G_routier)
+            sites_non_atteignables.difference_update(accessibles)
 
     tous_les_sites = set(G_routier.nodes)
-    sites_isoles = [n for n in G_routier.nodes if G_routier.degree(n) == 0]
-    sites_non_atteignables = list(tous_les_sites - sites_accessibles)
+    sites_accessibles = tous_les_sites - sites_non_atteignables
+    sites_non_atteignables_list = list(sites_non_atteignables)
 
-    print("[DEBUG_ANALYSIS] Analyse globale terminée avec succès.")
+    # 3. Autres indicateurs (Fibre, Cycles, Isolation)
+    composantes_fibre = list(nx.connected_components(G_fibre)) if len(G_fibre.nodes) > 0 else []
+    cycles_detectes = not nx.is_directed_acyclic_graph(G_routier)
+    sites_isoles = [n for n in G_routier.nodes if G_routier.degree(n) == 0]
+
+    print(
+        f"[DEBUG_ANALYSIS] Total casernes : {len(casernes)} | Sites accessibles : {len(sites_accessibles)} | Non atteignables : {len(sites_non_atteignables_list)}")
 
     return {
         "casernes_reference": casernes,
@@ -63,10 +79,8 @@ def analyser_indicateurs_reseau(view: str = "routier"):
         "composantes_fibre": [list(c) for c in composantes_fibre],
         "cycles_orientes": cycles_detectes,
         "sites_isoles": sites_isoles,
-        "sites_non_atteignables": sites_non_atteignables
+        "sites_non_atteignables": sites_non_atteignables_list
     }
-
-
 @router.get("/report")
 def get_analysis_report(view: str = "routier"):
     data = analyser_indicateurs_reseau(view)

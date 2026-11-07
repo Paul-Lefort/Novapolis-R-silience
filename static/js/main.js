@@ -9,6 +9,8 @@ import * as algorithms from './features/algorithms.js';
 import * as intervention from './features/intervention.js';
 import * as fibre from './features/fibre.js';
 import * as report from './features/report.js';
+import * as negativeCycles from './features/negativeCycles.js';
+import * as benchmark from './features/benchmark.js';
 
 // data-action="..." -> handler (reçoit l'élément cliqué)
 const clickActions = {
@@ -28,6 +30,8 @@ const clickActions = {
     'load-preset': (el) => dataset.loadPresetScenario(el.dataset.scenario),
     'run-report': report.runReport,
     'show-unreachable': report.showUnreachable,
+    'run-negative-cycles': negativeCycles.runNegativeCycleCheck,
+    'run-platform-benchmark': benchmark.runPlatformBenchmark,
 };
 
 // data-change="..." -> handler (reçoit l'élément modifié)

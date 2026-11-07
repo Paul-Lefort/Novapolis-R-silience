@@ -1,62 +1,61 @@
-
-import os
-
-import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/algorithms", tags=["Algorithms"])
+# Import des algorithmes Python
+from app.algorithms.dfs import run as dfs
+from app.algorithms.bfs import run as bfs
+from app.algorithms.dijkstra import run as dijkstra
+from app.algorithms.bellman_ford import run as bellman_ford
+from app.algorithms.floyd_warshall import run as floyd_warshall
+from app.algorithms.kruskal import run as kruskal
+from app.algorithms.prim import run as prim
 
-SERVICES = {
-    "dfs": os.getenv("DFS_URL", "http://dfs:8000"),
-    "bfs": os.getenv("BFS_URL", "http://bfs:8000"),
-    "dijkstra": os.getenv("DIJKSTRA_URL", "http://dijkstra:8000"),
-    "bellman_ford": os.getenv(
-        "BELLMAN_FORD_URL", "http://bellman_ford:8000"
-    ),
-    "floyd_warshall": os.getenv(
-        "FLOYD_WARSHALL_URL", "http://floyd_warshall:8000"
-    ),
-    "kruskal": os.getenv("KRUSKAL_URL", "http://kruskal:8000"),
-    "prim": os.getenv("PRIM_URL", "http://prim:8000"),
-}
+router = APIRouter(
+    prefix="/api/algorithms",
+    tags=["Algorithms"]
+)
 
 
 class AlgorithmRequest(BaseModel):
     graph: dict
 
 
+# Association entre les noms des algorithmes et leurs fonctions
+ALGORITHMS = {
+    "dfs": dfs,
+    "bfs": bfs,
+    "dijkstra": dijkstra,
+    "bellman_ford": bellman_ford,
+    "floyd_warshall": floyd_warshall,
+    "kruskal": kruskal,
+    "prim": prim,
+}
+
+
 @router.post("/{algorithm}")
-async def run_algorithm(algorithm: str, request: AlgorithmRequest):
-    if algorithm not in SERVICES:
+def run_algorithm(algorithm: str, request: AlgorithmRequest):
+
+    if algorithm not in ALGORITHMS:
         raise HTTPException(
             status_code=404,
             detail=f"Algorithme inconnu : {algorithm}"
         )
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{SERVICES[algorithm]}/run",
-                json=request.model_dump()
-            )
+        algorithm_function = ALGORITHMS[algorithm]
 
-        if response.status_code >= 400:
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=response.text
-            )
+        result = algorithm_function(request.graph)
 
-        return response.json()
+        return {
+            "algorithm": algorithm,
+            "result": result
+        }
 
-    except httpx.TimeoutException:
+    except HTTPException:
+        raise
+
+    except Exception as e:
         raise HTTPException(
-            status_code=504,
-            detail="Le microservice a mis trop de temps à répondre."
-        )
-
-    except httpx.RequestError:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Le microservice {algorithm} est indisponible."
+            status_code=400,
+            detail=f"Erreur lors de l'exécution de {algorithm} : {str(e)}"
         )

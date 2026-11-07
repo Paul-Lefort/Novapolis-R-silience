@@ -1,3 +1,4 @@
+
 services:
   web:
     build: .
@@ -7,8 +8,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      dfs:
+        condition: service_started
+      bfs:
+        condition: service_started
+      dijkstra:
+        condition: service_started
+      bellman_ford:
+        condition: service_started
+      floyd_warshall:
+        condition: service_started
+      kruskal:
+        condition: service_started
+      prim:
+        condition: service_started
     volumes:
-      - .:/app   # dev uniquement : rechargement du code
+      - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   db:
@@ -21,6 +36,34 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  dfs:
+    build: ./microservices/dfs
+    restart: unless-stopped
+
+  bfs:
+    build: ./microservices/bfs
+    restart: unless-stopped
+
+  dijkstra:
+    build: ./microservices/dijkstra
+    restart: unless-stopped
+
+  bellman_ford:
+    build: ./microservices/bellman_ford
+    restart: unless-stopped
+
+  floyd_warshall:
+    build: ./microservices/floyd_warshall
+    restart: unless-stopped
+
+  kruskal:
+    build: ./microservices/kruskal
+    restart: unless-stopped
+
+  prim:
+    build: ./microservices/prim
+    restart: unless-stopped
 
 volumes:
   db_data:

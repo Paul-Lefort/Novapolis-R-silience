@@ -22,12 +22,21 @@ class NetworkChangeRequest(BaseModel):
 async def load_custom_network(
         sites_file: Optional[UploadFile] = File(None),
         routes_file: Optional[UploadFile] = File(None),
-        fibre_file: Optional[UploadFile] = File(None)
+        fibre_file: Optional[UploadFile] = File(None),
+        demandes_file: Optional[UploadFile] = File(None)
 ):
     logger.info("[IMPORT] Réception de fichiers réseaux personnalisés.")
     try:
         saved_files = []
-        for file_obj, filename in [(sites_file, "sites.csv"), (routes_file, "routes.csv"), (fibre_file, "fibre.csv")]:
+        # On ajoute le tuple pour demandes.csv
+        fichiers_cibles = [
+            (sites_file, "sites.csv"),
+            (routes_file, "routes.csv"),
+            (fibre_file, "fibre.csv"),
+            (demandes_file, "demandes.csv")
+        ]
+
+        for file_obj, filename in fichiers_cibles:
             if file_obj:
                 with open(BASE_DIR / filename, "wb") as f:
                     f.write(await file_obj.read())
@@ -47,7 +56,7 @@ async def load_custom_network(
 def apply_network_change(change: NetworkChangeRequest):
     logger.info(f"[IMPORT] Modification requise : {change.action} sur {change.identifier} dans {change.target_file}")
 
-    if change.target_file not in ["sites.csv", "routes.csv", "fibre.csv"]:
+    if change.target_file not in ["sites.csv", "routes.csv", "fibre.csv", "demandes.csv"]:
         raise HTTPException(status_code=403, detail="Cible interdite.")
 
     file_path = BASE_DIR / change.target_file
@@ -60,7 +69,7 @@ def apply_network_change(change: NetworkChangeRequest):
             reader = csv.DictReader(f)
             fieldnames = reader.fieldnames
             for row in reader:
-                row_id = str(row.get("id") or f"{row.get('u')}-{row.get('v')}")
+                row_id = str(row.get("id") or row.get("origine") or f"{row.get('u')}-{row.get('v')}")
                 if row_id == str(change.identifier):
                     if change.action == "update_status":
                         row["statut"] = change.new_value

@@ -306,11 +306,13 @@ def _indic_fibre(F0, mst0, panne=None):
             cout_total_acm=_cout_mst(F))
     return out
 
+
 def evaluer_scenarios_service(nb_demandes: int, critere: str, axe: Optional[str],
                               troncon: Optional[str], types_sensibles: Optional[str]) -> Dict[str, Any]:
     """
     Trois scénarios comparés sur les mêmes demandes d'intervention :
       1. situation normale (référence) ; 2. fermeture d'un axe routier ; 3. panne d'un tronçon de fibre.
+    Utilise 'demandes.csv' s'il existe, sinon génère des demandes aléatoires/sensibles.
     """
     _, unite = _critere(critere)
     G0 = _reweighted(load_networkx_graph_from_csv("routier"), critere)
@@ -320,9 +322,31 @@ def evaluer_scenarios_service(nb_demandes: int, critere: str, axe: Optional[str]
     casernes = _casernes(G0)
     if not casernes:
         raise ValueError("Aucune caserne (type « caserne ») dans sites.csv.")
+
     sensibles, types_utilises, note_types = _sensibles(G0, types_sensibles)
-    pas = len(sensibles) / min(nb_demandes, len(sensibles)) if sensibles else 1
-    demandes = [sensibles[int(i * pas)] for i in range(min(nb_demandes, len(sensibles)))]
+
+    # --- Chargement des demandes : Fichier prioritaire, sinon génération automatique
+    demandes = []
+    demandes_path = BASE_DIR / "demandes.csv"
+    if demandes_path.exists():
+        try:
+            with open(demandes_path, mode="r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    orig = row.get("origine")
+                    if orig:
+                        node_id = parse_node_id(orig)
+                        if node_id in G0:
+                            demandes.append(node_id)
+            if demandes:
+                note_types = (note_types or "") + " [Chargé depuis demandes.csv]"
+        except Exception:
+            pass
+
+    # Repli : Si le fichier CSV est absent ou vide, on utilise la méthode par défaut (sensibles)
+    if not demandes:
+        pas = len(sensibles) / min(nb_demandes, len(sensibles)) if sensibles else 1
+        demandes = [sensibles[int(i * pas)] for i in range(min(nb_demandes, len(sensibles)))]
 
     # --- référence
     indic_base, base = _indic_routier(G0.copy(), casernes, demandes, sensibles)
@@ -361,7 +385,8 @@ def evaluer_scenarios_service(nb_demandes: int, critere: str, axe: Optional[str]
         panne, origine_panne = _troncon_critique(F0, mst0), "tronçon de l'ACM le plus coûteux à raccorder"
 
     scenarios = [
-        {"id": "normal", "titre": "Situation normale", "description": "Référence : réseaux de base, aucune perturbation.",
+        {"id": "normal", "titre": "Situation normale",
+         "description": "Référence : réseaux de base, aucune perturbation.",
          "perturbation": {"arcs_routiers_fermes": [], "troncon_fibre": None},
          "routier": indic_base, "fibre": _indic_fibre(F0, mst0)},
         {"id": "axe_ferme", "titre": "Fermeture d'un axe routier",
@@ -370,7 +395,8 @@ def evaluer_scenarios_service(nb_demandes: int, critere: str, axe: Optional[str]
          "routier": indic_axe, "fibre": _indic_fibre(F0, mst0)},
         {"id": "panne_fibre", "titre": "Panne d'un tronçon de fibre",
          "description": f"Tronçon en panne ({origine_panne}) : " + (f"{panne[0]}–{panne[1]}" if panne else "aucun"),
-         "perturbation": {"arcs_routiers_fermes": [], "troncon_fibre": {"u": panne[0], "v": panne[1]} if panne else None},
+         "perturbation": {"arcs_routiers_fermes": [],
+                          "troncon_fibre": {"u": panne[0], "v": panne[1]} if panne else None},
          "routier": indic_base, "fibre": _indic_fibre(F0, mst0, panne)},
     ]
 

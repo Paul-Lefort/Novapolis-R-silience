@@ -1,0 +1,29 @@
+\section{Modélisation des Réseaux et Jeux de Données}
+
+Pour modéliser la métropole de Novapolis, le système s'appuie sur deux graphes distincts partageant un référentiel commun de sites géographiques, mais obéissant à des règles topologiques, directionnelles et physiques bien distinctes.
+
+\subsection{Réseau routier}
+Le réseau routier est modélisé sous la forme d'un \textbf{graphe orienté pondéré} ($DiGraph$). Chaque arc représente une voie de circulation autorisée dans un sens unique, reflétant fidèlement les contraintes de la circulation urbaine (sens uniques, axes de pénétration majeurs). Les pondérations associées aux arcs correspondent aux temps de parcours nominaux (exprimés en minutes) ainsi qu'aux temps constatés en période de pointe. 
+
+Dans les scénarios opérationnels et métier, les temps de trajet sont strictement non négatifs. Des coûts négatifs ne sont introduits que de manière exceptionnelle et artificielle dans un jeu de test dédié, afin de vérifier formellement la capacité des algorithmes de type Bellman-Ford et Floyd-Warshall à détecter la présence de circuits absorbants.
+
+\subsection{Réseau de fibre optique}
+Le réseau de fibre optique est quant à lui modélisé par un \textbf{graphe non orienté pondéré} ($Graph$). Chaque arête représente un tronçon de fibre physiquement constructible ou existant entre deux nœuds du réseau. Le poids associé correspond au coût d'investissement et de construction, exprimé dans une unité monétaire choisie. Ce réseau est soumis à des contraintes dynamiques d'exclusion ou de panne (zones inondables, emprises non autorisées, coupures matérielles).
+
+\subsection{Rétrospective, retours d'expérience et traitement des superpositions}
+La conception et la génération des jeux de données d'entrée ont nécessité une démarche itérative rigoureuse. Dans un premier temps, nous avons exploré une approche de génération purement aléatoire pour répartir les sommets et créer les liaisons. Cependant, cette méthode s'est révélée totalement inopérante : la proximité stochastique brute des points géographiques et l'absence de contraintes topologiques engendraient un réseau chaotique, caractérisé par des croisements d'arêtes aberrants, des enclaves isolées et une impossibilité totale d'obtenir une représentation visuelle claire ou un comportement routier réaliste.
+
+Face à ces limites, après des recherches approfondies sur la modélisation des réseaux de transport urbain, nous avons intégré la bibliothèque \texttt{NetworkX} couplée à des scripts de génération géospatiale contrôlés (\texttt{genererSite.py}, \texttt{genererRoute.py}, \texttt{genererFibre.py}). Cette évolution a permis d'imposer des règles de distribution spatiale cohérentes, de maîtriser la densité des arcs et des arêtes en fonction de la taille de la métropole (allant d'un petit graphe de test de 10 sites jusqu'à des jeux de données de plus de 1000 sommets), et de structurer proprement les graphes sous-jacents. 
+
+Malgré ces verrous de génération, certaines configurations topologiques complexes ont persisté, entraînant la superposition visuelle de certains arcs sur les cartes de visualisation. Si la coexistence d'arcs bidirectionnels de type $u \rightarrow v$ et $v \rightarrow u$ ne pose aucun problème algorithmique ou structurel (chacun disposant de ses propres métriques), le croisement et la superposition d'arcs distincts (par exemple, un arc indépendant se superposant géométriquement à l'axe $u \rightarrow v$) rendaient la lecture graphique illisible. Pour résoudre cette difficulté, le système applique un décalage ou une torsion géométrique (\emph{edge curvature/offset}) sur les arcs en conflit, permettant de les courber légèrement afin de les dissocier visuellement sans altérer la matrice d'adjacence sous-jacente.
+
+\subsection{Fichiers d'entrée et validation}
+L'architecture logicielle s'appuie sur des fichiers CSV normalisés et documentés :
+\begin{itemize}
+    \item \texttt{sites.csv} : \texttt{id, nom, type, longitude, latitude}
+    \item \texttt{routes.csv} : \texttt{u, v, temps\_normal, temps\_pointe, statut}
+    \item \texttt{fibre.csv} : \texttt{u, v, cost, statut}
+    \item \texttt{demandes.csv} : \texttt{id, origine, type, priorite}
+    \item \texttt{scenarios.csv} : Fichiers décrivant les perturbations appliquées.
+\end{itemize}
+Le validateur intégré au système garantit l'unicité stricte des identifiants de sommets, vérifie la cohérence des types et rejette explicitement toute arête ou arc faisant référence à un site inexistant, tout en veillant à ne jamais altérer les fichiers sources originaux.

@@ -1,0 +1,38 @@
+\section{Architecture Logicielle et Choix Technologiques}
+
+\subsection{Organisation générale et séparation des responsabilités}
+L’architecture de \textbf{Novapolis Résilience} repose sur une séparation claire entre la logique de calcul, la couche d’interface web et la gestion des fichiers. Cette organisation modulaire facilite la maintenance, simplifie les tests unitaires et permet à chaque composant d’évoluer indépendamment. Le code source est regroupé dans un dossier principal \texttt{app/} divisé en sous-modules thématiques.
+Au-delà de cette structure technique, le développement du projet a fait l'objet d'une répartition claire des responsabilités au sein de l'équipe : l'un des membres s'est principalement consacré à l'implémentation des algorithmes de calcul ainsi qu'à l'élaboration des tests unitaires associés pour garantir la robustesse du code, tandis que l'autre s'est concentré sur la conception des modules thématiques, l'intégration et le développement global de l'application.
+\subsection{La couche d'exposition : Le package \texttt{app/routers/}}
+Les routeurs FastAPI situés dans \texttt{app/routers/} jouent uniquement le rôle de contrôleurs d'API REST. Leurs responsabilités se limitent à :
+\begin{itemize}
+    \item \textbf{La validation des entrées :} Récupération des paramètres de requêtes (\texttt{Query}), des formulaires (\texttt{Form}) ou des fichiers téléversés (\texttt{UploadFile}). Pydantic valide automatiquement ces données avant qu'elles n'atteignent le code métier.
+    \item \textbf{La transmission au service métier :} Les routeurs ne réalisent aucun calcul topologique ou algorithmique ; ils appellent directement les fonctions du module algorithmique.
+    \item \textbf{La gestion des codes HTTP :} Traduction des erreurs levées par le code (sommet absent, format invalide) en codes de retour HTTP adaptés (400, 404, 500) et journalisation via Uvicorn.
+\end{itemize}
+
+\subsection{La couche métier : Le package \texttt{app/algorithme/}}
+Ce package contient le coeur de calcul de l'application, totalement indépendant de la partie web :
+\begin{itemize}
+    \item \textbf{Les algorithmes fondamentaux :} Les fichiers \texttt{shortest\_paths.py} et \texttt{traversal.py} implémentent les parcours (BFS, DFS) et les plus courts chemins (Dijkstra, Bellman-Ford, Floyd-Warshall, Kruskal, Prim).
+    \item \textbf{La gestion des scénarios :} Le service \texttt{resilience\_service.py} applique les simulations de crise sur des copies des graphes pour ne jamais corrompre les données d'origine.
+\end{itemize}
+
+\subsection{Le gestionnaire de données : Le module \texttt{app/algorithme/helper.py}}
+Le fichier \texttt{helper.py} fait le lien entre les fichiers CSV de stockage et les structures en mémoire de NetworkX :
+\begin{itemize}
+    \item \textbf{Chargement des graphes :} La fonction \texttt{load\_networkx\_graph\_from\_csv} lit les CSV (\texttt{sites.csv}, \texttt{routes.csv}, \texttt{fibre.csv}), crée les objets \texttt{nx.DiGraph} ou \texttt{nx.Graph}, et écarte automatiquement les éléments marqués en maintenance ou en travaux.
+    \item \textbf{Normalisation des identifiants :} La fonction \texttt{parse\_node\_id} harmonise les identifiants de sommets numériques et alphanumériques.
+    \item \textbf{Traduction des requêtes interactives :} La fonction \texttt{prepare\_networkx\_graph} convertit les données reçues depuis l'interface utilisateur en objets exploitables par les algorithmes.
+\end{itemize}
+
+\subsection{L'interface en ligne de commande (\texttt{cli.py})}
+Un script exécutable \texttt{cli.py} est disponible à la racine du projet pour lancer l'ensemble des modules analytiques directement depuis le terminal, garantissant une utilisation hors du serveur web et une reproductibilité rapide des tests.
+
+\subsection{Choix technologiques}
+Les technologies suivantes ont été retenues pour répondre aux besoins de performance et de simplicité de déploiement :
+\begin{itemize}
+    \item \textbf{Docker et Docker Compose :} L'application est conteneurisée pour garantir un environnement d'exécution identique, que ce soit en local ou sur un serveur de production, évitant ainsi les problèmes de dépendances.
+    \item \textbf{FastAPI (Python) :} Choisi pour sa rapidité d'exécution, sa légèreté et sa prise en charge native des types Python (\emph{type hints}) couplée à Pydantic, ce qui simplifie la validation des données et la génération automatique de la documentation.
+    \item \textbf{Interface front-end légère :} L'application intègre des pages HTML de visualisation (s'appuyant sur des bibliothèques comme Leaflet ou Vis.js) permettant aux utilisateurs d'interagir graphiquement avec les réseaux et de déclencher les simulations de pannes.
+\end{itemize}

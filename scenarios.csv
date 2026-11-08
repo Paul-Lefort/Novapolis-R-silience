@@ -1,0 +1,5 @@
+scenario_id,element,u,v,propriete,valeur
+scen_1,route,1,26,statut,ferme
+scen_1,route,26,1,statut,ferme
+scen_2,fibre,1,62,statut,panne
+scen_3,route,2,23,temps_pointe,25.0

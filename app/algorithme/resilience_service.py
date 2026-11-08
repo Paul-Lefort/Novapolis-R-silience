@@ -22,16 +22,13 @@ SENSIBLES_PAR_DEFAUT = ("hopital", "ecole", "mairie", "prefecture", "pharmacie",
 def _norm(text: str) -> str:
     return unicodedata.normalize("NFKD", str(text)).encode("ascii", "ignore").decode().lower().strip()
 
-
 def _sort_key(x):
     return (isinstance(x, str), x)
-
 
 def _critere(name: str):
     if name not in CRITERES:
         raise ValueError(f"Critère inconnu : {name}")
     return CRITERES[name]
-
 
 def _reweighted(G: nx.Graph, critere: str) -> nx.Graph:
     attr, _ = _critere(critere)
@@ -41,17 +38,14 @@ def _reweighted(G: nx.Graph, critere: str) -> nx.Graph:
             d["weight"] = float(d[attr])
     return H
 
-
 def _edges_of(G: nx.Graph):
     edges = [(u, v, float(d.get("weight", 1.0))) for u, v, d in G.edges(data=True)]
     if not G.is_directed():
         edges += [(v, u, w) for u, v, w in edges]
     return edges
 
-
 def _casernes(G: nx.Graph) -> list:
     return [n for n, d in G.nodes(data=True) if _norm(d.get("type", "")) == "caserne"]
-
 
 def _parse_pairs(text: Optional[str]) -> list:
     pairs = []
@@ -64,10 +58,8 @@ def _parse_pairs(text: Optional[str]) -> list:
             pairs.append((parse_node_id(parts[0]), parse_node_id(parts[1])))
     return pairs
 
-
 def _signature(G: nx.Graph):
     return G.number_of_edges(), round(sum(float(d.get("weight", 0)) for *_, d in G.edges(data=True)), 6)
-
 
 def generer_rapport_diagnostic(view: str) -> Dict[str, Any]:
     G = load_networkx_graph_from_csv("routier")
@@ -104,7 +96,6 @@ def generer_rapport_diagnostic(view: str) -> Dict[str, Any]:
         "avertissement": avertissement,
     }
 
-
 def _solve(G: nx.Graph, algo: str, s: Any, t: Any) -> Dict[str, Any]:
     res = sp.solve(algo, list(G.nodes), _edges_of(G), s, t)
     rencontres = []
@@ -115,7 +106,6 @@ def _solve(G: nx.Graph, algo: str, s: Any, t: Any) -> Dict[str, Any]:
             rencontres.append({"u": u, "v": v, "statut": statut})
     res["fermetures_rencontrees"] = rencontres
     return res
-
 
 def calculer_intervention_service(start: str, target: str, view: str, algo: str, critere: str,
                                   manual_arcs: Optional[str], scenario_bytes: Optional[bytes]) -> Dict[str, Any]:
@@ -183,10 +173,6 @@ def calculer_intervention_service(start: str, target: str, view: str, algo: str,
         "degradation": degradation,
     }
 
-# ======================================================================================
-# Module 2.4 : comparaison des algorithmes sur la même instance
-# ======================================================================================
-
 def comparer_algorithmes_service(start: str, target: str, view: str, critere: str) -> Dict[str, Any]:
     """Dijkstra, Bellman-Ford et Floyd-Warshall sur la même instance (+ BFS comme repère « arcs »)."""
     _, unite = _critere(critere)
@@ -220,11 +206,6 @@ def comparer_algorithmes_service(start: str, target: str, view: str, critere: st
         "chemins_identiques": len({tuple(r["path"]) for r in comparables if r["accessible"]}) <= 1,
     }
 
-
-# ======================================================================================
-# Module 5 : scénarios de résilience (appliqués sur des COPIES du graphe de base)
-# ======================================================================================
-
 def _sensibles(G: nx.Graph, types_param: Optional[str]):
     casernes = set(_casernes(G))
     candidats = [(n, _norm(d.get("type", ""))) for n, d in G.nodes(data=True) if n not in casernes]
@@ -240,7 +221,6 @@ def _sensibles(G: nx.Graph, types_param: Optional[str]):
     utilises = sorted({G.nodes[n].get("type", "") for n in retenus})
     return sorted(retenus, key=_sort_key), utilises, note
 
-
 def _distances(G: nx.Graph, casernes: list):
     """Dijkstra multi-casernes : une seule exécution depuis une super-source reliée à chaque caserne."""
     H = G.copy()
@@ -250,7 +230,6 @@ def _distances(G: nx.Graph, casernes: list):
     dist, paths = nx.single_source_dijkstra(H, SOURCE, weight="weight")
     dist.pop(SOURCE, None)
     return dist, {k: p[1:] for k, p in paths.items() if k != SOURCE}
-
 
 def _indic_routier(G, casernes, demandes, sensibles, base=None):
     dist, paths = _distances(G, casernes)
@@ -279,7 +258,6 @@ def _indic_routier(G, casernes, demandes, sensibles, base=None):
                        retard_moyen_pct=round(sum(pcts) / len(pcts), 2))
     return out, (dist, paths)
 
-
 def _secours(F0: nx.Graph, mst0: nx.Graph, u, v):
     """Tronçon de raccordement le moins coûteux après retrait de (u, v) de l'ACM initial."""
     T = mst0.copy()
@@ -294,7 +272,6 @@ def _secours(F0: nx.Graph, mst0: nx.Graph, u, v):
                 best = {"u": x, "v": y, "cost": round(float(d["cost"]), 3)}
     return best
 
-
 def _troncon_critique(F0, mst0):
     """Tronçon de l'ACM dont la panne coûte le plus cher à réparer (ou n'est pas réparable)."""
     pire, pire_score = None, -1.0
@@ -305,11 +282,9 @@ def _troncon_critique(F0, mst0):
             pire, pire_score = (u, v), score
     return pire
 
-
 def _cout_mst(F):
     mst = nx.minimum_spanning_tree(F, weight="cost")
     return round(sum(float(d["cost"]) for *_, d in mst.edges(data=True)), 3)
-
 
 def _indic_fibre(F0, mst0, panne=None):
     F = F0.copy()                                    # copie : la fibre de base reste intacte
@@ -330,7 +305,6 @@ def _indic_fibre(F0, mst0, panne=None):
             nb_composantes=nx.number_connected_components(F),
             cout_total_acm=_cout_mst(F))
     return out
-
 
 def evaluer_scenarios_service(nb_demandes: int, critere: str, axe: Optional[str],
                               troncon: Optional[str], types_sensibles: Optional[str]) -> Dict[str, Any]:
@@ -407,11 +381,6 @@ def evaluer_scenarios_service(nb_demandes: int, critere: str, axe: Optional[str]
         "reference_inchangee": _signature(G0) == sig_G and _signature(F0) == sig_F,
         "scenarios": scenarios,
     }
-
-
-# ======================================================================================
-# Module 4 : ACM multiples (coûts égaux)
-# ======================================================================================
 
 def acm_couts_egaux_service() -> Dict[str, Any]:
     """

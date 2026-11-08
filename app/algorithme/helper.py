@@ -80,14 +80,17 @@ def load_networkx_graph_from_csv(view: str = "routier") -> nx.Graph:
 
 def prepare_networkx_graph(graph_data: Dict[str, Any], network_type: str = "routier") -> Tuple[nx.Graph, Any, Any]:
     """Charge le graphe à partir d'un payload JSON interactif."""
-    logger.info(f"[HELPER] Préparation du graphe depuis payload JSON ({network_type})")
+
+    actual_network_type = graph_data.get("network_type", network_type)
+
+    logger.info(f"[HELPER] Préparation du graphe depuis payload JSON ({actual_network_type})")
 
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
     start = parse_node_id(graph_data.get("start")) if graph_data.get("start") is not None else None
     target = parse_node_id(graph_data.get("target")) if graph_data.get("target") is not None else None
 
-    G = nx.DiGraph() if network_type == "routier" else nx.Graph()
+    G = nx.DiGraph() if actual_network_type == "routier" else nx.Graph()
     for n in nodes:
         G.add_node(parse_node_id(n))
 
@@ -107,7 +110,6 @@ def prepare_networkx_graph(graph_data: Dict[str, Any], network_type: str = "rout
 
     logger.debug(f"[HELPER] JSON chargé : {len(G.nodes)} noeuds, {len(G.edges)} arêtes (Exclus: {count_exclus})")
     return G, start, target
-
 
 def event(step_type: str, title: str, description: str, **kwargs) -> Dict[str, Any]:
     base = {"type": step_type, "title": title, "description": description}

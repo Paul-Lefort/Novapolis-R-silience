@@ -61,12 +61,14 @@ def run_network_algorithm_generic(algo_name: str, request: RunRequest, view: str
             logger.warning(f"[API] Sommet d'arrivée {target} introuvable.")
             raise HTTPException(status_code=400, detail=f"Sommet d'arrivée {target} introuvable ou en travaux.")
 
-        # Préparation du payload pour les algos (compatibilité avec l'ancienne architecture JSON)
+        # Préparation du payload pour les algos
         prepared_graph = {
             "nodes": list(G.nodes),
-            "edges": [{"source": u, "target": v, "weight": data.get("weight", 1), "statut": data.get("statut", "")} for u, v, data in G.edges(data=True)],
+            "edges": [{"source": u, "target": v, "weight": data.get("weight", 1), "statut": data.get("statut", "")}
+                      for u, v, data in G.edges(data=True)],
             "start": start,
-            "target": target
+            "target": target,
+            "network_type": view  # <--- AJOUT ICI
         }
 
         # Délégation au module métier correspondant

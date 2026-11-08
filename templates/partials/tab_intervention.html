@@ -1,7 +1,7 @@
 {# Menu « intervention » (icône de la sidebar) #}
 <section id="tab-intervention" class="sidebar-tab-content" hidden>
     <div class="sidebar-section">
-        <h3>Calcul d'Intervention</h3>
+        <h3>Itinéraires de secours</h3>
         <p class="hint">Choisissez la caserne de départ dans la liste et cliquez sur la carte pour définir le site d'intervention.</p>
 
         <div class="panel">
@@ -14,7 +14,23 @@
         </div>
 
         <div class="field-group">
-            <div class="panel-title">Scénario de perturbation</div>
+            <div class="panel-title">Algorithme et critère</div>
+            <label class="field-label" for="inter-algo">Algorithme :</label>
+            <select id="inter-algo" class="sidebar-select">
+                <option value="dijkstra">Dijkstra (référence, poids ≥ 0)</option>
+                <option value="bellman_ford">Bellman-Ford</option>
+                <option value="floyd_warshall">Floyd-Warshall</option>
+            </select>
+            <label class="field-label mt-sm" for="inter-critere">Critère de coût :</label>
+            <select id="inter-critere" class="sidebar-select">
+                <option value="temps_normal">Durée en circulation normale (min)</option>
+                <option value="temps_pointe">Durée en heure de pointe (min)</option>
+                <option value="distance">Distance (km)</option>
+            </select>
+        </div>
+
+        <div class="field-group">
+            <div class="panel-title">Scénario de fermeture</div>
             <label class="field-label" for="inter-scenario-file">Importer scenarios.csv :</label>
             <input type="file" id="inter-scenario-file" accept=".csv" class="file-input">
 
@@ -22,7 +38,11 @@
             <input type="text" id="inter-manual-arcs" class="sidebar-input" placeholder="Ex: 3->16, 8->10">
         </div>
 
-        <button class="btn btn-lg btn-block btn-red" data-action="run-intervention">Calculer le trajet d'intervention</button>
+        <div class="stack">
+            <button class="btn btn-lg btn-block btn-blue" data-action="run-intervention">Calculer le trajet d'intervention</button>
+            <button class="btn btn-block btn-gray" data-action="compare-algos">Comparer les algorithmes sur ce trajet</button>
+        </div>
         <div id="intervention-results" class="results"></div>
+        <div id="compare-results" class="results"></div>
     </div>
 </section>

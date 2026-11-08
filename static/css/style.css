@@ -76,6 +76,7 @@ body.app-layout {
     transition: width 0.25s ease;
     z-index: 900;
 }
+.sidebar.wide { width: 480px; }
 .sidebar.collapsed { width: 56px; }
 .sidebar.collapsed .sidebar-content { display: none; }
 
@@ -371,3 +372,18 @@ body.app-layout {
 .legend-dot.caserne { background: #e8710a; }
 .legend-dot.unreachable { background: #ea4335; }
 .notion { margin-top: 2px; font-size: 11px; color: var(--text-2); }
+
+/* ===== Tableaux et sections repliables ===== */
+.table-wrap { overflow-x: auto; }
+.grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+.grid th { padding: 6px 8px; text-align: left; font-weight: 500; color: var(--text-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.grid td { padding: 6px 8px; border-bottom: 1px solid var(--hover); vertical-align: top; }
+.grid tr:last-child td { border-bottom: none; }
+.grid td:not(:first-child), .grid th:not(:first-child) { text-align: right; }
+
+.fold { margin-top: 8px; font-size: 12px; }
+.fold summary { cursor: pointer; color: var(--blue); font-weight: 500; }
+.fold[open] summary { margin-bottom: 6px; }
+.limits { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.limits ul { margin: 0; padding-left: 18px; line-height: 1.5; color: var(--text-2); }
+.limits li { margin-bottom: 6px; }

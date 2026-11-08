@@ -1,37 +1,37 @@
+import logging
 import networkx as nx
-from .common import prepare_networkx_graph, event, make_response
+from .helper import prepare_networkx_graph, event, make_response
 
+logger = logging.getLogger("uvicorn.error")
 
 def run(graph_data):
+    logger.info("[ALGO] Lancement de Prim (Fibre)")
     G, start, _ = prepare_networkx_graph(graph_data, network_type="fibre")
 
     if len(G.nodes) == 0:
+        logger.error("[ALGO] Prim : Le graphe est vide.")
         raise ValueError("Le graphe est vide.")
 
-    # Si aucun sommet de départ n'est fourni, on prend le premier nœud du graphe par défaut
-    if not start or start not in G:
-        start = list(G.nodes)[0]
-
-    steps = []
-    steps.append(event("initialize", "Initialisation de Prim", f"Démarrage de l'arbre à partir du sommet {start}."))
+    steps = [event("initialize", "Initialisation de Prim", "Préparation du graphe non orienté.")]
 
     try:
-        # Utilisation de NetworkX pour Prim
-        mst_g = nx.minimum_spanning_tree(G, algorithm="prim", weight="weight")
+        mst_edges = list(nx.minimum_spanning_edges(G, algorithm="prim", weight="weight", data=True))
 
-        # Extraction des arêtes et du coût total
-        total_weight = sum(d.get("weight", 0) for u, v, d in mst_g.edges(data=True))
+        path_nodes = []
+        total_weight = 0
+        for u, v, data in mst_edges:
+            total_weight += data.get("weight", 0)
+            if u not in path_nodes: path_nodes.append(u)
+            if v not in path_nodes: path_nodes.append(v)
 
-        # Parcours en profondeur (DFS) ou liste des sommets pour l'affichage visuel
-        path_nodes = list(nx.dfs_preorder_nodes(mst_g, source=start))
-
-        steps.append(event("complete", "MST Prim calculé",
-                           f"Arbre couvrant minimum de Prim généré (coût total : {total_weight})."))
+        steps.append(event("complete", "MST Prim calculé", f"Poids total de {total_weight}."))
+        logger.info(f"[ALGO] Prim terminé. Poids total : {total_weight}")
 
         return make_response(graph_data, steps, {
             "path": path_nodes,
             "cost": total_weight,
-            "mst_edges": [{"source": u, "target": v, "weight": d.get("weight")} for u, v, d in mst_g.edges(data=True)]
+            "mst_edges": [{"source": u, "target": v, "weight": d.get("weight")} for u, v, d in mst_edges]
         })
     except Exception as exc:
+        logger.error(f"[ALGO] Prim : Erreur critique -> {str(exc)}")
         raise ValueError(f"Erreur lors du calcul de Prim : {str(exc)}")

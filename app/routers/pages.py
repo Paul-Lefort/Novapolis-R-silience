@@ -6,7 +6,6 @@ from app.templating import templates
 
 router = APIRouter()
 
-
 @router.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse(
@@ -14,4 +13,3 @@ def read_root(request: Request):
         name="index.html",
         context={"title": settings.app_title},
     )
-

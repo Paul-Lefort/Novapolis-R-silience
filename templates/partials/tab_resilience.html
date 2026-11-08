@@ -1,0 +1,45 @@
+{# Menu « résilience » (icône de la sidebar) #}
+<section id="tab-resilience" class="sidebar-tab-content" hidden>
+    <div class="sidebar-section">
+        <h3>Résilience et scénarios</h3>
+        <p class="hint">Compare trois scénarios sur les mêmes demandes d'intervention : situation normale, fermeture d'un axe routier, panne d'un tronçon de fibre. Les perturbations sont appliquées sur une copie du graphe.</p>
+
+        <div class="stack">
+            <label class="field-label" for="res-nb">Nombre de demandes (sites sensibles) :</label>
+            <input type="number" id="res-nb" class="sidebar-input" value="30" min="1" max="500">
+
+            <label class="field-label" for="res-critere">Critère de coût :</label>
+            <select id="res-critere" class="sidebar-select">
+                <option value="temps_normal">Durée en circulation normale (min)</option>
+                <option value="temps_pointe">Durée en heure de pointe (min)</option>
+                <option value="distance">Distance (km)</option>
+            </select>
+
+            <label class="field-label" for="res-axe">Axe à fermer (facultatif, u->v) :</label>
+            <input type="text" id="res-axe" class="sidebar-input" placeholder="Par défaut : l'arc le plus emprunté">
+
+            <label class="field-label" for="res-troncon">Tronçon de fibre en panne (facultatif, u-v) :</label>
+            <input type="text" id="res-troncon" class="sidebar-input" placeholder="Par défaut : le plus coûteux à raccorder">
+
+            <label class="field-label" for="res-types">Types de sites sensibles (facultatif) :</label>
+            <input type="text" id="res-types" class="sidebar-input" placeholder="Ex : hopital, ecole">
+
+            <button class="btn btn-lg btn-block btn-blue" data-action="run-scenarios">Évaluer les trois scénarios</button>
+        </div>
+
+        <div id="scenario-results" class="results"></div>
+
+        <details class="fold limits">
+            <summary>Limites des données, des coûts et du modèle</summary>
+            <ul>
+                <li><b>Données synthétiques.</b> Le réseau est généré : distances et durées sont fixes, sans trafic dynamique ni incident hors scénarios.</li>
+                <li><b>Un chemin de coût minimal n'est pas une intervention réaliste.</b> Le coût est un temps de trajet : il ignore le délai de mobilisation, la disponibilité des véhicules, la capacité des casernes et la priorité des interventions.</li>
+                <li><b>Demandes simulées.</b> Chaque demande part de la caserne la plus proche, avec un seul véhicule et sans file d'attente. L'échantillon de sites sensibles est régulier, pas statistique.</li>
+                <li><b>« Axe important » est une approximation.</b> C'est l'arc le plus emprunté par les plus courts chemins de référence, pas un axe jugé stratégique.</li>
+                <li><b>Routes en travaux déjà exclues.</b> Les arcs en travaux, maintenance ou déploiement sont retirés du graphe de base : leur impact n'apparaît pas comme une dégradation.</li>
+                <li><b>Fibre.</b> Le coût d'un tronçon est un coût de pose ; il ne mesure ni le délai de réparation ni la redondance réelle du service.</li>
+                <li><b>Critère unique.</b> Durée, distance ou coût sont optimisés séparément ; aucun compromis multicritère (sécurité, saturation, pente) n'est modélisé.</li>
+            </ul>
+        </details>
+    </div>
+</section>

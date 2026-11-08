@@ -9,6 +9,7 @@ from app.algorithme.helper import load_networkx_graph_from_csv
 logger = logging.getLogger("uvicorn.error")
 router = APIRouter(prefix="/api/benchmark", tags=["benchmark"])
 
+
 @router.get("/run")
 def run_platform_benchmark(view: str = Query("routier")) -> Dict[str, Any]:
     logger.info(f"[BENCHMARK] Démarrage des mesures de performance sur la vue : '{view}'")
@@ -26,7 +27,17 @@ def run_platform_benchmark(view: str = Query("routier")) -> Dict[str, Any]:
         logger.warning("[BENCHMARK] Pas assez de sommets.")
         return {"result": {"error": "Pas assez de sommets pour benchmarker"}}
 
-    source, target = nodes[0], nodes[-1]
+    source = nodes[0]
+
+    # Correction : Sélectionner un nœud cible qui possède réellement un chemin depuis la source
+    reachable = nx.single_source_shortest_path_length(G, source)
+    valid_targets = [n for n in reachable if n != source]
+
+    if not valid_targets:
+        logger.warning("[BENCHMARK] La source est isolée, aucun chemin sortant.")
+        return {"result": {"error": "Le premier sommet est isolé du reste du graphe."}}
+
+    target = valid_targets[-1]  # On prend un nœud valide et connecté
     repetitions = 5
 
     def measure(algo_name: str, func, *args, **kwargs) -> Optional[float]:
@@ -53,7 +64,8 @@ def run_platform_benchmark(view: str = Query("routier")) -> Dict[str, Any]:
         "DFS": measure("DFS", list, nx.dfs_edges(G, source))
     }
 
-    if node_count <= 250:
+    # Floyd-Warshall activé jusqu'à 1001 sommets 
+    if node_count <= 1001:
         metrics["Floyd-Warshall"] = measure("Floyd-Warshall", dict, nx.floyd_warshall(G, weight='weight'))
     else:
         metrics["Floyd-Warshall"] = None

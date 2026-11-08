@@ -1,8 +1,8 @@
 \section{Architecture Logicielle et Choix Technologiques}
 
 \subsection{Organisation générale et séparation des responsabilités}
-L'architecture de \textbf{Novapolis Résilience} repose sur une séparation claire entre la logique de calcul, la couche d'interface web et la gestion des fichiers. Cette organisation modulaire facilite la maintenance, simplifie les tests unitaires et permet à chaque composant d'évoluer indépendamment. Le code source est regroupé dans un dossier principal \texttt{app/} divisé en sous-modules thématiques.
-
+L’architecture de \textbf{Novapolis Résilience} repose sur une séparation claire entre la logique de calcul, la couche d’interface web et la gestion des fichiers. Cette organisation modulaire facilite la maintenance, simplifie les tests unitaires et permet à chaque composant d’évoluer indépendamment. Le code source est regroupé dans un dossier principal \texttt{app/} divisé en sous-modules thématiques.
+Au-delà de cette structure technique, le développement du projet a fait l'objet d'une répartition claire des responsabilités au sein de l'équipe : l'un des membres s'est principalement consacré à l'implémentation des algorithmes de calcul ainsi qu'à l'élaboration des tests unitaires associés pour garantir la robustesse du code, tandis que l'autre s'est concentré sur la conception des modules thématiques, l'intégration et le développement global de l'application.
 \subsection{La couche d'exposition : Le package \texttt{app/routers/}}
 Les routeurs FastAPI situés dans \texttt{app/routers/} jouent uniquement le rôle de contrôleurs d'API REST. Leurs responsabilités se limitent à :
 \begin{itemize}

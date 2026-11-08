@@ -20,6 +20,10 @@ async function requestJson(url, options, fallbackMessage) {
     return unwrap(await res.json());
 }
 
+/** Paramètres d'URL sans les valeurs vides. */
+const query = (params) =>
+    new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null));
+
 /** GET toujours frais : jamais servi depuis le cache du navigateur. */
 const getFresh = (url, msg) => {
     const sep = url.includes('?') ? '&' : '?';
@@ -64,15 +68,27 @@ export const downloadFile = (filename) => { window.location.href = API.download(
 export const runAlgorithm = (algo, view, payload) =>
     postJson(`${API.runAlgo(algo)}?${new URLSearchParams({ view })}`, payload, 'Erreur lors du calcul');
 
-export const fetchReport = (view) =>
-    getFresh(`${API.report}?${new URLSearchParams({ view })}`, 'Erreur serveur lors de la récupération du rapport');
+export const fetchReport = () =>
+    getFresh(API.report, 'Erreur serveur lors de la récupération du rapport');
 
 export const computeIntervention = (formData) =>
     postForm(API.intervention, formData, "Erreur lors du calcul de l'intervention");
 
+export const compareAlgorithms = (start, target, critere) =>
+    getFresh(`${API.compareAlgos}?${query({ start, target, critere })}`, 'Erreur lors de la comparaison des algorithmes');
+
+export const fetchScenarios = (params) =>
+    getFresh(`${API.scenarios}?${query(params)}`, "Erreur lors de l'évaluation des scénarios");
+
+export const runCircuitTests = () =>
+    getFresh(API.negativeTests, 'Erreur lors des tests de circuits absorbants');
+
 // --- Fibre ---
 export const fetchAcm = (algo) =>
     getFresh(`${API.acm}?${new URLSearchParams({ algo })}`, "Erreur lors du calcul de l'ACM");
+
+export const fetchFibreTies = () =>
+    getFresh(API.fibreTies, "Erreur lors de l'analyse des coûts égaux");
 
 export const compareAcm = () =>
     getFresh(API.compare, 'Erreur lors de la comparaison');

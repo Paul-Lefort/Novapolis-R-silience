@@ -1,23 +1,22 @@
+import logging
 import networkx as nx
-from .common import prepare_networkx_graph, event, make_response
+from .helper import prepare_networkx_graph, event, make_response
 
+logger = logging.getLogger("uvicorn.error")
 
 def run(graph_data):
-    # Les algorithmes de MST (Kruskal/Prim) s'appliquent par défaut au réseau fibre (non orienté)
+    logger.info("[ALGO] Lancement de Kruskal (Fibre)")
     G, start, _ = prepare_networkx_graph(graph_data, network_type="fibre")
 
     if len(G.nodes) == 0:
+        logger.error("[ALGO] Kruskal : Le graphe est vide.")
         raise ValueError("Le graphe est vide.")
 
-    steps = []
-    steps.append(event("initialize", "Initialisation de Kruskal",
-                       "Préparation du graphe non orienté (hors maintenance/déploiement)."))
+    steps = [event("initialize", "Initialisation de Kruskal", "Préparation du graphe non orienté.")]
 
     try:
-        # Utilisation de NetworkX pour Kruskal (génère un ensemble d'arêtes)
         mst_edges = list(nx.minimum_spanning_edges(G, algorithm="kruskal", weight="weight", data=True))
 
-        # Reconstruction du chemin ou de la liste des arêtes du MST pour l'affichage
         path_nodes = []
         total_weight = 0
         for u, v, data in mst_edges:
@@ -25,8 +24,8 @@ def run(graph_data):
             if u not in path_nodes: path_nodes.append(u)
             if v not in path_nodes: path_nodes.append(v)
 
-        steps.append(event("complete", "MST Kruskal calculé",
-                           f"Arbre couvrant minimum trouvé avec un poids total de {total_weight}."))
+        steps.append(event("complete", "MST Kruskal calculé", f"Poids total de {total_weight}."))
+        logger.info(f"[ALGO] Kruskal terminé. Poids total : {total_weight}")
 
         return make_response(graph_data, steps, {
             "path": path_nodes,
@@ -34,4 +33,5 @@ def run(graph_data):
             "mst_edges": [{"source": u, "target": v, "weight": d.get("weight")} for u, v, d in mst_edges]
         })
     except Exception as exc:
+        logger.error(f"[ALGO] Kruskal : Erreur critique -> {str(exc)}")
         raise ValueError(f"Erreur lors du calcul de Kruskal : {str(exc)}")

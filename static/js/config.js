@@ -17,11 +17,18 @@ export const API = {
     generate: '/api/generate',
     importNetwork: '/api/import/network',
     runAlgo: (algo) => `/api/run-network/${encodeURIComponent(algo)}`,
-    report: '/api/analysis/report',
-    intervention: '/api/analysis/calcul-intervention',
+    report: '/api/resilience/report',
+    intervention: '/api/resilience/intervention',
+    compareAlgos: '/api/resilience/compare-algos',
+    negativeTests: '/api/resilience/negative-cycle-tests',
+    scenarios: '/api/resilience/scenarios',
+    fibreTies: '/api/resilience/fibre-ties',
     acm: '/api/fibre/acm',
     compare: '/api/fibre/comparer',
     breakdown: '/api/fibre/simuler-panne-troncon',
     downloadAll: '/api/download/all',
     download: (filename) => `/api/download/${filename}`,
 };
+
+/** Menus qui ont besoin de plus de largeur (tableaux). */
+export const WIDE_TABS = new Set(['intervention', 'resilience', 'circuits']);

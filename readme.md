@@ -13,7 +13,7 @@ Ce projet fournit une application complète (API FastAPI + Interface web + CLI) 
 4. [Utilisation de l'Interface en Ligne de Commande (CLI)](#-utilisation-de-linterface-en-ligne-de-commande-cli)
 5. [Lancement du Serveur Web et de l'API](#-lancement-du-serveur-web-et-de-lapi)
 6. [Détails des Modules Algorithmiques](#-détails-des-modules-algorithmiques)
-7. [Exécution des Tests](#-exécution-des-tests)
+7. [Exécution des Tests Unitaires](#-exécution-des-tests-unitaires)
 
 ---
 
@@ -48,6 +48,17 @@ novapolis/
 │   │   └── pages.py           # Routeur d'affichage des templates HTML
 │   │
 │   └── generation/            # Scripts de génération aléatoire des fichiers CSV (sites, routes, fibre)
+│
+├── tests/                     # Suite de tests unitaires modulaires (pytest)
+│   ├── conftest.py            # Fixtures et données de test partagées
+│   ├── test_helper.py         # Tests des utilitaires et du chargement CSV
+│   ├── test_bfs.py            # Tests de l'algorithme BFS
+│   ├── test_dfs.py            # Tests de l'algorithme DFS
+│   ├── test_dijkstra.py       # Tests de l'algorithme Dijkstra
+│   ├── test_bellman_ford.py   # Tests de l'algorithme Bellman-Ford
+│   ├── test_floyd_warshall.py # Tests de l'algorithme Floyd-Warshall
+│   ├── test_kruskal.py        # Tests de l'algorithme Kruskal
+│   └── test_prim.py           # Tests de l'algorithme Prim
 │
 ├── cli.py                     # Interface en ligne de commande (CLI) complète
 ├── requirements.txt           # Dépendances Python
@@ -116,15 +127,31 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Une fois le serveur lancé :
-* **Interface graphique :** Ouvrez `http://localhost:8000/` dans votre navigateur.
-* **Documentation interactive (Swagger) :** Accédez à `http://localhost:8000/docs`.
+- **Interface graphique :** Ouvrez `http://localhost:8000/` dans votre navigateur.
+- **Documentation interactive (Swagger) :** Accédez à `http://localhost:8000/docs`.
 
 ---
 
 ## Détails des Modules Algorithmiques
 
-* **Module 1 (BFS / DFS) :** Utilisé pour l'accessibilité multi-sources, la connexité de la fibre, la recherche du chemin minimisant le nombre d'arcs, et la détection des cycles par coloration à 3 états.
-* **Module 2 (Dijkstra, Bellman-Ford, Floyd-Warshall) :** Calcul des plus courts chemins de secours avant/après perturbation. Évaluation rigoureuse des retards absolus et relatifs.
-* **Module 3 (Circuits absorbants) :** Gestion de l'état `moins_infini` pour empêcher l'affichage de valeurs aberrantes en présence de boucles de poids négatif accessibles.
-* **Module 4 (Kruskal & Prim) :** Calcul d'Arbres Couvrants Minimaux (ACM) sur le graphe non orienté de la fibre, gestion des forêts de raccordement et simulation de pannes de tronçons avec calcul de secours optimal.
-* **Module 5 (Résilience et Benchmarks) :** Comparaison de scénarios de perturbation (situation normale vs axe fermé vs panne de fibre) mesurant l'augmentation des temps de trajet et l'enclavement des zones sensibles. Les benchmarks mesurent les performances réelles sur 5 répétitions en excluant les phases d'E/S disque.
+- **Module 1 (BFS / DFS) :** Utilisé pour l'accessibilité multi-sources, la connexité de la fibre, la recherche du chemin minimisant le nombre d'arcs, et la détection des cycles par coloration à 3 états.
+- **Module 2 (Dijkstra, Bellman-Ford, Floyd-Warshall) :** Calcul des plus courts chemins de secours avant/après perturbation. Évaluation rigoureuse des retards absolus et relatifs.
+- **Module 3 (Circuits absorbants) :** Gestion de l'état `moins_infini` pour empêcher l'affichage de valeurs aberrantes en présence de boucles de poids négatif accessibles.
+- **Module 4 (Kruskal & Prim) :** Calcul d'Arbres Couvrants Minimaux (ACM) sur le graphe non orienté de la fibre, gestion des forêts de raccordement et simulation de pannes de tronçons avec calcul de secours optimal.
+- **Module 5 (Résilience et Benchmarks) :** Comparaison de scénarios de perturbation (situation normale vs axe fermé vs panne de fibre) mesurant l'augmentation des temps de trajet et l'enclavement des zones sensibles. Les benchmarks mesurent les performances réelles sur 5 répétitions en excluant les phases d'E/S disque.
+
+---
+
+## Exécution des Tests Unitaires
+
+Le projet dispose d'une suite complète de tests unitaires modulaires localisée dans le dossier `tests/`. Chaque composant et algorithme possède son propre fichier de test isolé, intégrant des méthodes de cycle de vie (`setup_method` / `teardown_method`).
+
+Pour exécuter **tous les tests** en un seul coup avec un affichage détaillé et la visualisation des logs de cycle de vie :
+```bash
+pytest -v -s
+```
+
+Pour exécuter les tests d'un module ou d'un algorithme spécifique (par exemple Dijkstra) :
+```bash
+pytest tests/test_dijkstra.py -v -s
+```

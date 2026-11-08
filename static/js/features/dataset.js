@@ -47,6 +47,7 @@ export async function submitImport() {
         sites_file: $('import-sites').files[0],
         routes_file: $('import-routes').files[0],
         fibre_file: $('import-fibre').files[0],
+        demandes_file: $('import-demandes').files[0], // <--- Ajouté ici
     };
     if (!Object.values(files).some(Boolean)) {
         alert('Veuillez sélectionner au moins un fichier CSV à importer.');

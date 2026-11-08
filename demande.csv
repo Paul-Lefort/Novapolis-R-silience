@@ -1,0 +1,11 @@
+id,origine,type,priorite
+1,82,secours,1
+2,95,intervention_urgence,2
+3,29,approvisionnement,1
+4,87,secours,5
+5,55,secours,1
+6,12,approvisionnement,2
+7,65,secours,5
+8,26,flux_donnees,2
+9,58,intervention_urgence,1
+10,98,approvisionnement,4

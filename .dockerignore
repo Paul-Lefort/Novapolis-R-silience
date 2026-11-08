@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .venv/
 tests/
+readme.md
+docker-compose.yml
+Dockerfile
+.dockerignore

@@ -1,0 +1,31 @@
+\section{Conclusion et Recommandations Opérationnelles}
+
+\subsection{Bilan synthétique du projet Novapolis Résilience}
+Le projet intégrateur \textbf{Novapolis Résilience} a permis de concevoir et de développer une solution logicielle complète, modulaire et hautement reproductible, répondant rigoureusement aux exigences d'analyse, d'évaluation et d'optimisation des infrastructures critiques de la métropole. 
+
+En s'appuyant sur une modélisation mathématique rigoureuse des graphes (graphes orientés pondérés pour le réseau routier et non orientés pour le réseau de fibre optique), le système intègre l'ensemble des modules analytiques attendus :
+\begin{itemize}
+    \item Un diagnostic précis de l'accessibilité des sites sensibles par des parcours itératifs BFS et DFS.
+    \item Une robustesse accrue dans le calcul des itinéraires de secours grâce aux algorithmes de Dijkstra, Bellman-Ford et Floyd-Warshall.
+    \item Une gestion formelle des anomalies topologiques et des circuits absorbants.
+    \item Une optimisation rigoureuse des coûts d'infrastructure par l'application de Kruskal et Prim, complétée par l'étude des arbres couvrants multiples et des plans de raccordement en cas de panne.
+    \item Une simulation comparative de scénarios de crise macroscopiques couplée à des indicateurs quantitatifs de résilience.
+\end{itemize}
+
+Grâce à une séparation stricte des responsabilités entre la couche algorithmique, les services de résilience, l'API REST FastAPI, l'interface visuelle et l'outil en ligne de commande (\texttt{cli.py}), l'outil dote les gestionnaires de la métropole d'une capacité d'aide à la décision opérationnelle leur permettant de simuler instantanément l'impact de crises majeures (coupures de routes, pannes de fibre) sur une infrastructure isolée et sécurisée.
+
+\subsection{Limites du modèle et perspectives d'évolution}
+Malgré la robustesse de l'architecture et la rigueur des indicateurs implémentés, l'analyse critique des résultats met en évidence certaines limites inhérentes aux choix de modélisation :
+\begin{itemize}
+    \item \textbf{Imparfaiteté et staticité des données d'entrée :} Les fichiers CSV et les matrices de coûts reposent sur des estimations nominales ou des états figés qui ne capturent pas la dynamique stochastique instantanée des flux de circulation en temps réel.
+    \item \textbf{Hypothèses de linéarisation des coûts :} L'affectation de pondérations fixes (temps ou coûts monétaires) ne prend pas en compte les phénomènes de congestion non linéaire en cas d'afflux massif de véhicules sur un itinéraire de secours secondaire.
+    \item \textbf{Persistance et passage à l'échelle (Scalabilité) :} Le stockage sur fichiers plats et la gestion en mémoire volatile (via NetworkX) ne répondent pas aux exigences d'un environnement de production hautement concurrentiel. Toutefois, le recours direct à une base de données orientée graphe clé en main (ou à un moteur distribué) aurait court-circuité l'objectif pédagogique fondamental du projet, ces solutions encapsulant nativement et de manière opaque les algorithmes fondamentaux d'optimisation.
+\end{itemize}
+
+Afin de pallier ces contraintes et d'élever l'outil vers un standard industriel de pointe, les perspectives d'amélioration envisagées pour les futurs travaux incluent :
+\begin{enumerate}
+    \item \textbf{L'intégration de flux de données en temps réel :} Connexion de l'API à des capteurs urbains dynamiques et des API de trafic pour actualiser les pondérations routières en continu.
+    \item \textbf{L'optimisation dynamique multi-objectifs :} Déploiement d'algorithmes évolutionnaires ou de programmation multicritère pour arbitrer simultanément entre la minimisation des délais d'urgence, la réduction des coûts d'investissement en fibre et la maximisation de la redondance topologique.
+    \item \textbf{L'extension des interfaces d'administration cartographique :} Enrichissement du front-end pour permettre une visualisation géospatiale interactive avancée et un pilotage direct des scénarios de crise par les services de secours de la métropole.
+    \item \textbf{L'industrialisation de la couche de stockage :} Migration vers une architecture de persistance hybride (couplage d'une base relationnelle/géospatiale ou d'un moteur Big Data type Spark GraphFrames) permettant de conserver la maîtrise de l'implémentation algorithmique tout en garantissant la scalabilité sur des réseaux métropolitains massifs.
+\end{enumerate}

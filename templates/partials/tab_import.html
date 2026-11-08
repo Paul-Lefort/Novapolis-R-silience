@@ -1,0 +1,23 @@
+{# Menu « import » (icône de la sidebar) #}
+<section id="tab-import" class="sidebar-tab-content" hidden>
+    <div class="sidebar-section">
+        <h3>Import de Fichiers CSV</h3>
+        <p class="hint">Sélectionnez vos fichiers de données :</p>
+
+        <div class="stack">
+            <div><label class="field-label" for="import-sites">Sites :</label><input type="file" id="import-sites" accept=".csv" class="file-input"></div>
+            <div><label class="field-label" for="import-routes">Routes :</label><input type="file" id="import-routes" accept=".csv" class="file-input"></div>
+            <div><label class="field-label" for="import-fibre">Fibre :</label><input type="file" id="import-fibre" accept=".csv" class="file-input"></div>
+        </div>
+
+        <button class="btn btn-block btn-lg btn-green mt-md" data-action="import-files">Envoyer les fichiers au serveur</button>
+
+        <hr class="divider spaced">
+
+        <h3>Scénarios Prédéfinis</h3>
+        <p class="hint">Charger un scénario de test :</p>
+        <button class="btn btn-block btn-lg btn-blue" data-action="load-preset" data-scenario="standard">Charger le Scénario Standard (120 sites)</button>
+
+        <span id="import-status" class="status-text"></span>
+    </div>
+</section>

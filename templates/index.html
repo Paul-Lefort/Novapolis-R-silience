@@ -2,11 +2,70 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }}</title>
+
     <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- PapaParse -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- Application (modules ES, exécutés après le parsing du DOM) -->
+    <script type="module" src="/static/js/main.js"></script>
 </head>
-<body>
-    <h1>Bienvenue sur mon application FastAPI + Jinja2 + MySQL !</h1>
-    <p>Le rechargement à chaud (hot-reloading) est actif.</p>
+<body class="app-layout">
+
+    <!-- Barre de navigation supérieure -->
+    <nav class="google-nav">
+        <a href="/" class="google-nav-brand"><span class="c-blue">N</span><span class="c-red">o</span><span class="c-yellow">v</span><span class="c-blue">a</span><span class="c-green">p</span><span class="c-red">o</span><span class="c-yellow">l</span><span class="c-blue">i</span><span class="c-green">s</span></a>
+        <button class="google-nav-btn" data-action="open-modal">Générer un jeu de données</button>
+    </nav>
+
+    <div class="app-container">
+
+        <!-- Menu latéral rétractable -->
+        <aside id="sidebar" class="sidebar collapsed">
+
+            {% include "partials/sidebar_icons.html" %}
+
+            <div class="sidebar-content">
+
+                <!-- Vues du réseau (toujours visibles) -->
+                {% include "partials/network_views.html" %}
+
+                <hr class="sidebar-divider">
+
+                {% include "partials/tab_algo.html" %}
+
+                {% include "partials/tab_intervention.html" %}
+
+                {% include "partials/tab_fibre.html" %}
+
+                {% include "partials/tab_resilience.html" %}
+
+                {% include "partials/tab_circuits.html" %}
+
+                {% include "partials/tab_export.html" %}
+
+                {% include "partials/tab_import.html" %}
+
+                {% include "partials/tab_stats.html" %}
+
+            </div>
+        </aside>
+
+        <!-- Carte -->
+        <main class="map-main-content">
+            {% include "partials/loading_overlay.html" %}
+            <div id="network-container"></div>
+        </main>
+    </div>
+
+    <!-- Modale de génération -->
+    {% include "partials/modal_generate.html" %}
 </body>
 </html>

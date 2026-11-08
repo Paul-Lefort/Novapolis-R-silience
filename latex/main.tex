@@ -1,0 +1,129 @@
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes,calc}
+
+% Charte graphique professionnelle
+\definecolor{primaryblue}{RGB}{15, 35, 70}
+\definecolor{accentcolor}{RGB}{0, 130, 200}
+\definecolor{lightbg}{RGB}{240, 243, 246}
+\definecolor{rulecolor}{RGB}{200, 210, 220}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    citecolor=primaryblue,
+    urlcolor=accentcolor
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Novapolis Résilience - Rapport de Projet}
+\rhead{ING-APP1-BDML}
+\lfoot{Théorie des graphes}
+\rfoot{LEFORT - GERMAIN}
+\cfoot{\thepage}
+\begin{document}
+
+% Page de garde moderne, centrée et épurée
+\begin{titlepage}
+    \centering
+    \vspace*{0.5cm}
+    
+    % En-tête institutionnel
+    {\scshape\large Université Paris-Panthéon-Assas / EFREI Paris\par}
+    \vspace{0.2cm}
+    {\normalsize Cycle Ingénieur - Programme Grande École ($\text{PGE}$)\par}
+    \vspace{0.1cm}
+    {\small\itshape Spécialisation Big Data \& Machine Learning\par}
+    
+    \vspace{1.0cm}
+    
+    % Illustration centrale : Un véritable "G" majuscule formé par un réseau de nœuds et d'arêtes
+    \begin{tikzpicture}[scale=1.1]
+        % Cercle de fond subtil
+        \fill[lightbg] (0,0) circle (2.4cm);
+        
+        % Nœuds positionnés précisément pour dessiner la forme exacte d'un "G"
+        \node[circle, fill=accentcolor, inner sep=3.5pt] (g1) at (0.2, 0.0) {};  % Extrémité de la barre du G
+        \node[circle, fill=primaryblue, inner sep=3.5pt] (g2) at (1.1, 0.0) {};  % Jonction bord droit
+        \node[circle, fill=primaryblue, inner sep=3.5pt] (g3) at (0.9, -0.9) {}; % Coin bas-droit
+        \node[circle, fill=accentcolor, inner sep=4pt] (g4) at (0.0, -1.3) {};   % Base du G
+        \node[circle, fill=primaryblue, inner sep=3.5pt] (g5) at (-0.9, -0.9) {};% Coin bas-gauche
+        \node[circle, fill=primaryblue, inner sep=3.5pt] (g6) at (-1.3, 0.0) {}; % Milieu gauche
+        \node[circle, fill=primaryblue, inner sep=3.5pt] (g7) at (-0.9, 0.9) {}; % Coin haut-gauche
+        \node[circle, fill=accentcolor, inner sep=4pt] (g8) at (0.0, 1.2) {};   % Sommet du G
+        \node[circle, fill=primaryblue, inner sep=3.5pt] (g9) at (0.9, 0.9) {};  % Coin haut-droit
+        
+        % Tracé principal de la boucle et de la barre du "G"
+        \draw[thick, accentcolor] (g1) -- (g2);
+        \draw[thick, primaryblue] (g2) -- (g3);
+        \draw[thick, primaryblue] (g3) -- (g4);
+        \draw[thick, primaryblue] (g4) -- (g5);
+        \draw[thick, primaryblue] (g5) -- (g6);
+        \draw[thick, primaryblue] (g6) -- (g7);
+        \draw[thick, primaryblue] (g7) -- (g8);
+        \draw[thick, primaryblue] (g8) -- (g9);
+    \end{tikzpicture}
+    
+    \vspace{0.8cm}
+    
+    % Titre du projet
+    {\huge\bfseries\color{primaryblue} Novapolis Résilience}\\[0.3cm]
+    {\Large Planification des secours et conception d'un réseau urbain résilient}\par
+    
+    \vspace{0.4cm}
+    \textcolor{rulecolor}{\rule{0.6\textwidth}{0.8pt}}\\[0.4cm]
+    {\large\itshape Projet d'Algorithmique et Théorie des Graphes\par}
+    
+    \vspace{1.5cm}
+    
+    % Cadre des métadonnées
+    \fbox{
+        \begin{minipage}{0.75\textwidth}
+            \vspace{0.2cm}
+            \centering
+            \textbf{Module d'Enseignement :}\\
+            Algorithmique \& Théorie des Graphes\\
+            {\small Année académique 2026 – 2027}
+            \vspace{0.2cm}
+        \end{minipage}
+    }
+    
+    \vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% Inclusion des différents modules
+\input{sections/01_probleme.tex}
+\newpage
+
+\input{sections/02_donnees.tex}
+\newpage
+
+\input{sections/03_modules.tex}
+\newpage
+
+\input{sections/04_architecture.tex}
+\newpage
+
+\input{sections/05_experiences.tex}
+\newpage
+
+\input{sections/06_conclusion.tex}
+
+\end{document}

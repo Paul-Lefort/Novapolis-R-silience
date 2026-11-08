@@ -1,0 +1,46 @@
+\section{Fonctionnalités et Modules Analytiques}
+
+Le système implémente l'ensemble des modules algorithmiques exigés par le cahier des charges, en s'appuyant sur une conception modulaire et une distinction rigoureuse entre les structures de données orientées et non orientées.
+
+\subsection{Module 1 : Diagnostic d'accessibilité (DFS / BFS)}
+Pour répondre aux exigences de diagnostic de la métropole de Novapolis, les parcours en largeur (BFS) et en profondeur (DFS) ont été implémentés de manière itérative afin d'éviter tout dépassement de pile sur de grands graphes. Ces algorithmes sont exploités pour :
+\begin{enumerate}
+    \item \textbf{Calculer l'accessibilité des sites sensibles :} À partir d'un ensemble de casernes ou d'hôpitaux, un BFS multi-sources est exécuté sur le réseau routier orienté afin de déterminer l'ensemble exact des quartiers et établissements reliés.
+    \item \textbf{Identifier les composantes connexes du réseau fibre :} Grâce à un parcours DFS appliqué au graphe non orienté de la fibre, le système identifie les îlots de raccordement et les zones isolées.
+    \item \textbf{Déterminer des itinéraires minimisant le nombre d'arcs :} Utilisation d'un BFS non pondéré pour évaluer le chemin comptant le moins de sauts topologiques, utile pour minimiser les points de transition de données ou les intersections routières.
+    \item \textbf{Détecter les cycles orientés :} Implémentation d'un DFS à trois couleurs (blanc pour les sommets non visités, gris pour les sommets en cours d'exploration, noir pour les sommets complètement explorés) afin d'identifier formellement les boucles dans le réseau routier dirigé.
+    \item \textbf{Signaler les sites isolés ou inaccessibles :} Croisement des degrés du graphe et des ensembles de reachabilité pour lister les entités coupées de tout flux.
+\end{enumerate}
+
+\subsection{Module 2 : Itinéraires de secours et chemins minimaux}
+Le calcul des plus courts chemins constitue la pierre angulaire des interventions d'urgence. Le module intègre plusieurs algorithmes adaptés à différentes conditions opérationnelles :
+\begin{itemize}
+    \item \textbf{Dijkstra :} Utilisé comme référence principale pour tous les scénarios standards à coûts non négatifs (temps nominaux ou de pointe), implémenté avec un tas binaire pour garantir une complexité optimale.
+    \item \textbf{Bellman-Ford et Floyd-Warshall :} Intégrés pour gérer des cas plus généraux et valider la résistance de l'infrastructure face à des anomalies de modélisation ou des configurations complexes.
+\end{itemize}
+Pour chaque intervention, le système reconstruit pas à pas le chemin complet, indique sa durée totale, son nombre d'arcs, et évalue l'impact de perturbations. En comparant l'état avant et après coupure, le module calcule automatiquement le retard absolu et le retard relatif, tout en qualifiant le statut du site cible par un booléen d'accessibilité ou d'inaccessibilité formelle.
+
+\subsection{Module 3 : Détection des circuits absorbants}
+Bien que les grandeurs physiques du monde réel (temps de parcours, distances) soient strictement non négatives, la présence de boucles de minoration infinie peut corrompre les calculs d'optimisation. Un module de test spécifique a donc été développé pour valider le comportement de Bellman-Ford et de Floyd-Warshall :
+\begin{enumerate}
+    \item \textbf{Circuits accessibles depuis la source :} Le système détecte si un circuit absorbant est joignable depuis le point de départ des secours, signalant ainsi que les distances sur ce sous-graphe peuvent être diminuées indéfiniment ($\infty$ négatif).
+    \item \textbf{Circuits inaccessibles depuis la source :} Le module vérifie qu'un circuit absorbant situé dans une autre composante du graphe n'altère pas les calculs locaux si aucun chemin ne permet de l'atteindre.
+\end{enumerate}
+Cette gestion rigoureuse évite d'afficher des valeurs de coûts erronées ou finies sur des chemins instables.
+
+\subsection{Module 4 : Conception du réseau de fibre (Kruskal et Prim)}
+Pour optimiser le déploiement de la fibre optique avec un budget d'investissement maîtrisé, le système implémente les algorithmes de \textbf{Kruskal} et de \textbf{Prim} :
+\begin{itemize}
+    \item \textbf{Calcul d'Arbres Couvrants Minimaux (ACM) :} Construction de l'infrastructure optimale connectant l'ensemble des sites au coût minimal, ou d'une forêt couvrante si le réseau présente des coupures topologiques naturelles.
+    \item \textbf{Gestion des coûts égaux et multiplicité des ACM :} Analyse approfondie démontrant pourquoi plusieurs arbres couvrants de même coût total peuvent coexister lorsqu'une arête hors arbre possède un poids équivalent à une arête du chemin unique qui la relie dans l'arbre initial.
+    \item \textbf{Simulation de pannes et raccordement de secours :} En cas de coupure d'un tronçon de l'ACM, le module simule la séparation de l'arbre en deux composantes connexes et parcourt le graphe initial pour identifier instantanément la solution de raccordement alternatif la moins onéreuse.
+\end{itemize}
+
+\subsection{Module 5 : Résilience et scénarios macroscopiques}
+Afin d'évaluer la robustesse globale de la métropole de Novapolis, trois scénarios contrastés sont exécutés et comparés sur des copies isolées des structures de données :
+\begin{enumerate}
+    \item \textbf{Situation normale :} État de référence servant de base comparative pour l'ensemble des flux.
+    \item \textbf{Fermeture d'un axe routier majeur :} Simulation de la neutralisation d'un arc névralgique (travaux lourds ou accident bloquant).
+    \item \textbf{Panne d'un tronçon de fibre :} Rupture d'une liaison optique critique impactant les télécommunications des services d'urgence.
+\end{enumerate}
+L'évaluation s'appuie sur des indicateurs croisés : le volume de demandes devenues inaccessibles, l'augmentation moyenne et maximale des temps d'intervention, le coût financier de la réparation et la proportion critique de sites sensibles restant connectés au réseau.
